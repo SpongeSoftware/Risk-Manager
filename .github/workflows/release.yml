@@ -1,24 +1,117 @@
 name: Release
 
 on:
-  release:
-    types:
-      - published
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   release:
-    name: Deploy release & generate SBOM
+    name: Create release & deploy
     runs-on: ubuntu-latest
+    concurrency:
+      group: production
+      cancel-in-progress: false
     permissions:
       contents: write
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute next version
+        id: version
+        run: |
+          LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Previous version: $LATEST"
+          VERSION="${LATEST#v}"
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3)
+
+          case "${{ inputs.version_bump }}" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "previous_version=$LATEST" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.version.outputs.new_version }}"
+          git push origin "${{ steps.version.outputs.new_version }}"
+
+      - name: Create GitHub Release with generated notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.version.outputs.new_version }}" \
+            --title "${{ steps.version.outputs.new_version }}" \
+            --generate-notes \
+            --notes-start-tag "${{ steps.version.outputs.previous_version }}"
+
+      - name: Append direct commits to release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DIRECT_COMMITS=$(git log \
+            "${{ steps.version.outputs.previous_version }}..${{ steps.version.outputs.new_version }}" \
+            --no-merges \
+            --pretty=format:"- %s (%h)" 2>/dev/null || true)
+
+          if [ -n "$DIRECT_COMMITS" ]; then
+            CURRENT_NOTES=$(gh release view "${{ steps.version.outputs.new_version }}" --json body -q .body)
+            gh release edit "${{ steps.version.outputs.new_version }}" --notes "${CURRENT_NOTES}
+
+## Direct Commits
+${DIRECT_COMMITS}"
+          fi
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
-      - name: Deploy release to Fly.io
-        run: flyctl deploy --remote-only --image-label "${{ github.ref_name }}"
+      - name: Sync secrets to Fly.io
+        run: |
+          flyctl secrets set \
+            APP_ENV=production \
+            VITE_APP_ENV=production \
+            TURSO_DATABASE_URL="${{ secrets.TURSO_DATABASE_URL }}" \
+            TURSO_AUTH_TOKEN="${{ secrets.TURSO_AUTH_TOKEN }}" \
+            WORKOS_CLIENT_ID="${{ secrets.WORKOS_CLIENT_ID }}" \
+            WORKOS_API_KEY="${{ secrets.WORKOS_API_KEY }}" \
+            WORKOS_REDIRECT_URI="${{ secrets.WORKOS_REDIRECT_URI }}" \
+            WORKOS_COOKIE_PASSWORD="${{ secrets.WORKOS_COOKIE_PASSWORD }}" \
+            BOOTSTRAP_ADMIN_EMAIL="${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}" \
+            SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
+            SENTRY_ORG="${{ secrets.SENTRY_ORG }}" \
+            SENTRY_PROJECT="${{ secrets.SENTRY_PROJECT }}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only --image-label "${{ steps.version.outputs.new_version }}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
@@ -39,7 +132,8 @@ jobs:
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
-          artifact-name: sbom-${{ github.ref_name }}.spdx.json
+          artifact-name: sbom-${{ steps.version.outputs.new_version }}.spdx.json
           output-file: sbom.spdx.json
           format: spdx-json
           upload-release-assets: true
+          release-name: ${{ steps.version.outputs.new_version }}

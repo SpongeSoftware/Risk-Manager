@@ -43,13 +43,14 @@ A full-stack web application for conducting and managing risk assessments aligne
 2. [Configuration Reference](#configuration-reference)
 3. [Production Deployment (Fly.io)](#production-deployment-flyio)
 4. [Custom Domain & SSL](#custom-domain--ssl)
-5. [GitHub Actions & CI/CD](#github-actions--cicd)
-6. [Branch Protection Setup](#branch-protection-setup)
+5. [GitHub Secrets Setup](#github-secrets-setup)
+6. [GitHub Actions & CI/CD](#github-actions--cicd)
 7. [Creating Releases](#creating-releases)
-8. [Scripts](#scripts)
-9. [Roles](#roles)
-10. [Bootstrapping the First Admin](#bootstrapping-the-first-admin)
-11. [Sentry Environment Separation](#sentry-environment-separation)
+8. [Repository Security](#repository-security)
+9. [Scripts](#scripts)
+10. [Roles](#roles)
+11. [Bootstrapping the First Admin](#bootstrapping-the-first-admin)
+12. [Sentry Environment Separation](#sentry-environment-separation)
 
 ---
 
@@ -254,7 +255,7 @@ Sign in with your `BOOTSTRAP_ADMIN_EMAIL` to complete first-time setup.
 
 ### Subsequent deploys
 
-After the initial setup, deploys happen **automatically** via GitHub Actions whenever you merge a PR to `main`. See [GitHub Actions & CI/CD](#github-actions--cicd) below.
+After the initial setup, all future deploys are triggered by creating a release via GitHub Actions. See [Creating Releases](#creating-releases) below.
 
 ---
 
@@ -318,15 +319,50 @@ The `fly certs add` command is idempotent — it is safe to include in your depl
 
 ---
 
+## GitHub Secrets Setup
+
+All production credentials are stored as GitHub repository secrets. The release workflow syncs them to Fly.io automatically — you never need to run `fly secrets set` manually after initial setup.
+
+### Adding secrets
+
+Go to **GitHub → Repository → Settings → Secrets and variables → Actions → Secrets tab**, then add each of the following:
+
+| Secret | Where it's used | Description |
+|---|---|---|
+| `FLY_API_TOKEN` | Deploy to Fly | Generate at [fly.io/user/personal_access_tokens](https://fly.io/user/personal_access_tokens) |
+| `TURSO_DATABASE_URL` | Fly runtime | `libsql://your-db.turso.io` |
+| `TURSO_AUTH_TOKEN` | Fly runtime | Turso database auth token |
+| `WORKOS_CLIENT_ID` | Fly runtime | WorkOS application client ID |
+| `WORKOS_API_KEY` | Fly runtime | WorkOS API secret key |
+| `WORKOS_REDIRECT_URI` | Fly runtime | Production callback URL — `https://risk-manager.fly.dev/callback` |
+| `WORKOS_COOKIE_PASSWORD` | Fly runtime | 32+ character cookie encryption secret |
+| `BOOTSTRAP_ADMIN_EMAIL` | Fly runtime | First admin email (can be removed after first login) |
+| `SENTRY_DSN` | Fly runtime | Sentry project DSN |
+| `SENTRY_ORG` | Fly runtime + build | Sentry organisation slug |
+| `SENTRY_PROJECT` | Fly runtime + build | Sentry project slug |
+| `SENTRY_AUTH_TOKEN` | Build only | Source map upload token — **not** sent to Fly |
+
+> **`SENTRY_AUTH_TOKEN`** is only used at build time to upload source maps to Sentry. It is intentionally not synced to Fly's runtime environment.
+
+### Optional: custom domain variable
+
+If you have a custom domain, add one **variable** (not a secret) in the **Variables tab**:
+
+| Variable | Description |
+|---|---|
+| `FLY_CUSTOM_DOMAIN` | e.g. `riskmanager.youruniversity.edu` — triggers automatic cert provisioning on each release |
+
+---
+
 ## GitHub Actions & CI/CD
 
-Three workflows automate the full lifecycle:
+Two workflows handle the full lifecycle:
 
 ### CI — runs on every Pull Request
 
 **File:** `.github/workflows/ci.yml`
 
-Runs three parallel jobs against every PR targeting `main`:
+Runs three parallel jobs against every PR targeting `main`. All three must pass before a PR can be merged.
 
 | Job | What it checks |
 |---|---|
@@ -334,60 +370,84 @@ Runs three parallel jobs against every PR targeting `main`:
 | `lint` | ESLint strict — zero warnings or errors required |
 | `build` | Production build — must compile without errors |
 
-All three must pass before a PR can be merged.
+Merging to `main` does **not** trigger a deployment. Production is only updated via a tagged release.
 
-### Deploy — runs on merge to `main`
-
-**File:** `.github/workflows/deploy.yml`
-
-Automatically deploys to Fly.io after every merge to `main`. Runs CI checks first, then:
-1. Builds and deploys the Docker image to Fly
-2. Runs database migrations on the live instance
-
-### Release — runs when you publish a GitHub Release
+### Release — triggered manually by admins
 
 **File:** `.github/workflows/release.yml`
 
-When you publish a release (see [Creating Releases](#creating-releases)):
-1. Deploys the release build to Fly with the version tag as the image label
-2. Runs database migrations
-3. Generates a Software Bill of Materials (SBOM) and attaches `sbom-v1.x.x.spdx.json` to the release assets
+Only users with **write access** (admins/owners) can trigger this workflow. It:
 
-### Required GitHub Secrets
+1. Computes the next semantic version from the last git tag
+2. Creates and pushes the git tag
+3. Creates a GitHub Release with auto-generated changelog
+4. Syncs all GitHub Secrets to Fly.io as runtime environment variables
+5. Deploys the Docker image to Fly.io with the version label
+6. Runs database migrations on the live instance
+7. Generates a Software Bill of Materials (SBOM) and attaches it to the release
 
-Add these in **GitHub → Repository → Settings → Secrets and variables → Actions**:
-
-| Secret | Description |
-|---|---|
-| `FLY_API_TOKEN` | Generate at [fly.io/user/personal_access_tokens](https://fly.io/user/personal_access_tokens) |
-| `SENTRY_AUTH_TOKEN` | Sentry token for source map upload — needs `project:releases` and `org:read` scopes |
-
-And optionally, one **Actions variable** (not a secret — it's not sensitive):
-
-| Variable | Description |
-|---|---|
-| `FLY_CUSTOM_DOMAIN` | Your custom domain (e.g. `riskmanager.youruniversity.edu`). If set, the deploy workflow runs `fly certs add` on every deploy to ensure the cert exists. Leave unset to use the default `.fly.dev` subdomain. |
-
-Set variables in **GitHub → Repository → Settings → Secrets and variables → Actions → Variables tab**.
-
-> All other production env vars (`WORKOS_*`, `TURSO_*`, etc.) are set directly as Fly secrets in Step 3 above — they don't need to be duplicated as GitHub secrets.
+See [Creating Releases](#creating-releases) for how to trigger this workflow.
 
 ---
 
-## Branch Protection Setup
+## Creating Releases
 
-The `main` branch should be protected so that all changes go through a reviewed PR. These rules need to be applied once after creating the repository.
+Releases follow [semantic versioning](https://semver.org) starting from `v0.1.0`. The version is computed and tagged automatically — you only choose the bump type.
 
-**Protection rules:**
-- All PRs require at least 1 approval
-- Stale reviews are dismissed when new commits are pushed
-- All three CI checks (`typecheck`, `lint`, `build`) must pass
-- Branch must be up to date with `main` before merging
-- Direct pushes to `main` are blocked (except repo owner)
-- Force pushes are restricted to the repo owner only
+**Who can release:** Only repository admins and owners. Tag protection rules prevent non-admins from creating `v*` tags, and `workflow_dispatch` requires write access.
 
-### Apply via GitHub CLI
+### Steps
 
+1. Merge all PRs for the release into `main`
+2. Go to **GitHub → Repository → Actions → Release**
+3. Click **"Run workflow"** (top right)
+4. Select the bump type:
+   - **`patch`** — bug fixes and minor changes (e.g. `v0.1.0` → `v0.1.1`)
+   - **`minor`** — new features, backwards-compatible (e.g. `v0.1.1` → `v0.2.0`)
+   - **`major`** — breaking changes (e.g. `v0.2.0` → `v1.0.0`)
+5. Click **"Run workflow"**
+
+The workflow runs automatically (~5 minutes) and:
+- Creates the git tag and GitHub Release with a generated changelog
+  - PR-based changes are grouped by label (features, bug fixes, etc.)
+  - Direct commits to `main` not associated with a PR are appended in a separate **Direct Commits** section
+- Deploys to Fly.io
+- Attaches `sbom-vX.Y.Z.spdx.json` to the release assets
+
+### Labelling PRs for the changelog
+
+PRs are grouped in the release changelog by their GitHub labels:
+
+| Label | Changelog section |
+|---|---|
+| `enhancement`, `feature` | New Features |
+| `bug`, `fix` | Bug Fixes |
+| `security` | Security |
+| `dependencies` | Dependencies |
+| `chore`, `refactor`, `docs` | Maintenance |
+| `ignore-for-release` | Excluded from changelog |
+
+---
+
+## Repository Security
+
+This is a **public repository** — anyone can read and fork the code. All write operations are restricted to authorised collaborators.
+
+### What's enforced automatically
+
+| Protection | Mechanism |
+|---|---|
+| No direct pushes to `main` | Branch protection — all changes require a reviewed PR |
+| CI must pass before merge | Branch protection — `typecheck`, `lint`, `build` required |
+| All PRs require owner review | `.github/CODEOWNERS` — `@OWNER` must approve every PR |
+| Only admins can create releases | Tag protection ruleset on `v*` + `workflow_dispatch` requires write access |
+| Secrets never in code | All credentials stored as GitHub Secrets, synced to Fly at release time |
+
+### One-time setup (run after creating the repo)
+
+Full instructions with CLI commands are in [`.github/BRANCH_PROTECTION.md`](.github/BRANCH_PROTECTION.md). Summary:
+
+**1. Branch protection on `main`:**
 ```bash
 gh api repos/OWNER/REPO/branches/main/protection \
   --method PUT \
@@ -400,47 +460,33 @@ gh api repos/OWNER/REPO/branches/main/protection \
   --field 'allow_deletions=false'
 ```
 
-Replace `OWNER/REPO` with your GitHub repository path (e.g. `myname/risk-manager`).
+**2. Tag protection ruleset (restrict `v*` to admins):**
+```bash
+gh api repos/OWNER/REPO/rulesets \
+  --method POST \
+  --header "Accept: application/vnd.github+json" \
+  --field name="Release tags" \
+  --field target="tag" \
+  --field enforcement="active" \
+  --field conditions='{"ref_name":{"include":["refs/tags/v*"],"exclude":[]}}' \
+  --field rules='[{"type":"creation"},{"type":"deletion"}]' \
+  --field bypass_actors='[{"actor_id":5,"actor_type":"RepositoryRole","bypass_mode":"always"}]'
+```
 
-### Allow repo owner to force push
+**3. Update `CODEOWNERS`:** Edit `.github/CODEOWNERS` and replace `@OWNER` with your GitHub username.
 
-The above command disables force pushes for everyone. To allow the repo owner to force push when necessary:
+**4. Allow owner force push (UI only):** Settings → Branches → Edit `main` → "Allow force pushes" → "Specify who can force push" → add your username.
 
-1. Go to **GitHub → Repository → Settings → Branches**
-2. Click **Edit** on the `main` protection rule
-3. Under **"Allow force pushes"**, select **"Specify who can force push"**
-4. Add the repo owner's GitHub username
-5. Save
+### Additional hardening
 
----
+Go to **GitHub → Repository → Settings** and review:
 
-## Creating Releases
-
-Releases are managed through **GitHub Releases** with auto-generated changelogs.
-
-### How to create a release
-
-1. Go to **GitHub → Repository → Releases → Draft a new release**
-2. Click **"Choose a tag"** and type a new version (e.g. `v1.2.0`) — GitHub will create the tag on publish
-3. Click **"Generate release notes"** — GitHub automatically creates a changelog from merged PR titles since the last release, grouped by label (features, bug fixes, etc.)
-4. Edit the notes if needed, then click **"Publish release"**
-
-The release workflow triggers automatically and:
-- Deploys the tagged version to Fly.io
-- Attaches `sbom-v1.2.0.spdx.json` (a Software Bill of Materials) to the release assets
-
-### Labelling PRs for the changelog
-
-Apply labels to your PRs to control which changelog section they appear in:
-
-| Label | Changelog section |
-|---|---|
-| `enhancement`, `feature` | New Features |
-| `bug`, `fix` | Bug Fixes |
-| `security` | Security |
-| `dependencies` | Dependencies |
-| `chore`, `refactor`, `docs` | Maintenance |
-| `ignore-for-release` | Excluded from changelog |
+| Setting | Location | Recommended value |
+|---|---|---|
+| Fork PR workflow approval | Actions → General | "Require approval for first-time contributors" |
+| Wikis | General → Features | Disable if unused |
+| Discussions | General → Features | Enable or disable as needed |
+| Signed commits | Branch rule or Ruleset | Enable "Require signed commits" on `main` |
 
 ---
 
