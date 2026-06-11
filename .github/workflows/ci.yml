@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm typecheck
+        env:
+          APP_ENV: production
+          TURSO_DATABASE_URL: file:./data/db.sqlite
+          WORKOS_CLIENT_ID: ci-placeholder
+          WORKOS_API_KEY: ci-placeholder
+          WORKOS_REDIRECT_URI: http://localhost:3000/callback
+          WORKOS_COOKIE_PASSWORD: ci-placeholder-32-chars-padded-000
+          SENTRY_ORG: ci-placeholder
+          SENTRY_PROJECT: ci-placeholder
+          SENTRY_AUTH_TOKEN: ci-placeholder
+          VITE_APP_ENV: production
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+        env:
+          APP_ENV: production
+          TURSO_DATABASE_URL: file:./data/db.sqlite
+          WORKOS_CLIENT_ID: ci-placeholder
+          WORKOS_API_KEY: ci-placeholder
+          WORKOS_REDIRECT_URI: http://localhost:3000/callback
+          WORKOS_COOKIE_PASSWORD: ci-placeholder-32-chars-padded-000
+          SENTRY_ORG: ci-placeholder
+          SENTRY_PROJECT: ci-placeholder
+          SENTRY_AUTH_TOKEN: ci-placeholder
+          VITE_APP_ENV: production

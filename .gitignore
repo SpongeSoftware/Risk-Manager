@@ -5,3 +5,13 @@
 # React Router
 /.react-router/
 /build/
+
+# Environment files with secrets
+.env
+.env.production
+
+# Local database
+data/
+
+# Sentry
+.sentryclirc

@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  release:
+    name: Deploy release & generate SBOM
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy release to Fly.io
+        run: flyctl deploy --remote-only --image-label "${{ github.ref_name }}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Ensure custom domain certificate (idempotent)
+        if: vars.FLY_CUSTOM_DOMAIN != ''
+        run: flyctl certs add "${{ vars.FLY_CUSTOM_DOMAIN }}" || true
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Run database migrations
+        run: |
+          flyctl ssh console \
+            --app risk-manager \
+            --command "node --experimental-strip-types app/server/migrate.ts"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          artifact-name: sbom-${{ github.ref_name }}.spdx.json
+          output-file: sbom.spdx.json
+          format: spdx-json
+          upload-release-assets: true
