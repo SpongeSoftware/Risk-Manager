@@ -45,7 +45,37 @@ The API call above disables force pushes for everyone. To allow the owner to for
 
 ---
 
-## 2. Tag Protection — `v*` (release tags)
+## 2. Merge Strategy — Squash and Merge Only
+
+Only squash-and-merge is permitted on pull requests. This keeps `main`'s history linear — one commit per PR.
+
+### Apply via GitHub CLI
+
+```bash
+gh api repos/SpongeSoftware/Risk-Manager \
+  --method PATCH \
+  --header "Accept: application/vnd.github+json" \
+  --field allow_merge_commit=false \
+  --field allow_rebase_merge=false \
+  --field allow_squash_merge=true \
+  --field squash_merge_commit_title="PR_TITLE" \
+  --field squash_merge_commit_message="PR_BODY"
+```
+
+`PR_TITLE` sets the squashed commit subject to the PR title. `PR_BODY` includes the PR description and co-author lines in the commit body.
+
+### Apply via GitHub UI
+
+1. Go to **GitHub → Repository → Settings → General → Pull Requests**
+2. Uncheck **"Allow merge commits"**
+3. Uncheck **"Allow rebase merging"**
+4. Keep **"Allow squash merging"** checked
+5. Set the squash commit title to **"Pull request title"**
+6. Save
+
+---
+
+## 3. Tag Protection — `v*` (release tags)
 
 Prevents anyone without admin access from creating or deleting release tags, ensuring only authorised personnel can trigger deployments.
 
@@ -78,7 +108,7 @@ gh api repos/SpongeSoftware/Risk-Manager/rulesets \
 
 ---
 
-## 3. Public Repository Hardening
+## 4. Public Repository Hardening
 
 For a public repository where anyone can read code but writes are fully controlled:
 
@@ -122,7 +152,7 @@ Update `@ElCapitanSponge` to your GitHub username. This means no PR can be merge
 
 ---
 
-## 4. Secrets — Never Commit These
+## 5. Secrets — Never Commit These
 
 All production credentials are stored as **GitHub repository secrets** (Settings → Secrets and variables → Actions). They are never committed to the repository.
 
@@ -132,7 +162,7 @@ See the [README — GitHub Secrets Setup](../README.md#github-secrets-setup) sec
 
 ---
 
-## 5. Recommended: Require Signed Commits
+## 6. Recommended: Require Signed Commits
 
 Signed commits provide cryptographic proof that commits came from a verified author. To require signed commits on `main`:
 
