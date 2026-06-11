@@ -1,6 +1,6 @@
 # Repository Security Setup
 
-This document covers all one-time configuration steps to lock down the repository. Apply these after creating the repo on GitHub. Replace `OWNER/REPO` with your repository path throughout.
+This document covers all one-time configuration steps to lock down the repository. Apply these after creating the repo on GitHub. Replace `SpongeSoftware/Risk-Manager` with your repository path throughout.
 
 ---
 
@@ -11,7 +11,7 @@ Prevents direct pushes to `main` and enforces PR + CI review.
 ### Apply via GitHub CLI
 
 ```bash
-gh api repos/OWNER/REPO/branches/main/protection \
+gh api repos/SpongeSoftware/Risk-Manager/branches/main/protection \
   --method PUT \
   --header "Accept: application/vnd.github+json" \
   --field 'required_status_checks={"strict":true,"contexts":["typecheck","lint","build"]}' \
@@ -52,7 +52,7 @@ Prevents anyone without admin access from creating or deleting release tags, ens
 ### Apply via GitHub CLI
 
 ```bash
-gh api repos/OWNER/REPO/rulesets \
+gh api repos/SpongeSoftware/Risk-Manager/rulesets \
   --method POST \
   --header "Accept: application/vnd.github+json" \
   --field name="Release tags" \
@@ -115,10 +115,10 @@ Go to **GitHub → Repository → Settings → Collaborators and teams**:
 `.github/CODEOWNERS` in this repo is set to require the repo owner to review every PR:
 
 ```
-* @OWNER
+* @ElCapitanSponge
 ```
 
-Update `@OWNER` to your GitHub username. This means no PR can be merged without the owner's approval, regardless of other reviewer approvals.
+Update `@ElCapitanSponge` to your GitHub username. This means no PR can be merged without the owner's approval, regardless of other reviewer approvals.
 
 ---
 

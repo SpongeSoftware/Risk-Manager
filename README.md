@@ -1,7 +1,7 @@
 # Risk Manager
 
 [![MIT License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
-[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
+[![CI](https://github.com/SpongeSoftware/Risk-Manager/actions/workflows/ci.yml/badge.svg)](https://github.com/SpongeSoftware/Risk-Manager/actions/workflows/ci.yml)
 
 A full-stack web application for conducting and managing risk assessments aligned with **ISO 27001 (2022)** and **SOC 2** standards. Built for university teaching — students work in teams to identify, evaluate, and treat risks, with supervisors providing feedback and admins managing the platform.
 
@@ -66,7 +66,7 @@ A full-stack web application for conducting and managing risk assessments aligne
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/OWNER/REPO.git
+git clone https://github.com/SpongeSoftware/Risk-Manager.git
 cd risk-manager
 pnpm install
 ```
@@ -439,7 +439,7 @@ This is a **public repository** — anyone can read and fork the code. All write
 |---|---|
 | No direct pushes to `main` | Branch protection — all changes require a reviewed PR |
 | CI must pass before merge | Branch protection — `typecheck`, `lint`, `build` required |
-| All PRs require owner review | `.github/CODEOWNERS` — `@OWNER` must approve every PR |
+| All PRs require owner review | `.github/CODEOWNERS` — `@ElCapitanSponge` must approve every PR |
 | Only admins can create releases | Tag protection ruleset on `v*` + `workflow_dispatch` requires write access |
 | Secrets never in code | All credentials stored as GitHub Secrets, synced to Fly at release time |
 
@@ -449,7 +449,7 @@ Full instructions with CLI commands are in [`.github/BRANCH_PROTECTION.md`](.git
 
 **1. Branch protection on `main`:**
 ```bash
-gh api repos/OWNER/REPO/branches/main/protection \
+gh api repos/SpongeSoftware/Risk-Manager/branches/main/protection \
   --method PUT \
   --header "Accept: application/vnd.github+json" \
   --field 'required_status_checks={"strict":true,"contexts":["typecheck","lint","build"]}' \
@@ -462,7 +462,7 @@ gh api repos/OWNER/REPO/branches/main/protection \
 
 **2. Tag protection ruleset (restrict `v*` to admins):**
 ```bash
-gh api repos/OWNER/REPO/rulesets \
+gh api repos/SpongeSoftware/Risk-Manager/rulesets \
   --method POST \
   --header "Accept: application/vnd.github+json" \
   --field name="Release tags" \
@@ -473,7 +473,7 @@ gh api repos/OWNER/REPO/rulesets \
   --field bypass_actors='[{"actor_id":5,"actor_type":"RepositoryRole","bypass_mode":"always"}]'
 ```
 
-**3. Update `CODEOWNERS`:** Edit `.github/CODEOWNERS` and replace `@OWNER` with your GitHub username.
+**3. Update `CODEOWNERS`:** Edit `.github/CODEOWNERS` and replace `@ElCapitanSponge` with your GitHub username.
 
 **4. Allow owner force push (UI only):** Settings → Branches → Edit `main` → "Allow force pushes" → "Specify who can force push" → add your username.
 
