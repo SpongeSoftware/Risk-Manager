@@ -16,6 +16,16 @@ const schemeOptions: { value: ColorScheme; icon: string; label: string }[] = [
 	{ value: "dark", icon: "pi pi-moon", label: "Dark" },
 ]
 
+/**
+ * Application header bar rendered at the top of every protected page.
+ * Contains:
+ * - A 3-way Light / System / Dark theme toggle that writes to the app store
+ * - The signed-in user's full name and role label
+ * - A sign-out button that POSTs to `/logout`
+ *
+ * @param props - Component props.
+ * @param props.user - The authenticated user record used for name and role display.
+ */
 export function TopBar({ user }: TopBarProps) {
 	const colorScheme = useStore(appStore, (s) => s.colorScheme)
 

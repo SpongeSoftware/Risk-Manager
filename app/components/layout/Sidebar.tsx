@@ -44,6 +44,16 @@ const navItems: NavItem[] = [
 	},
 ]
 
+/**
+ * Left-hand navigation sidebar rendered inside {@link AppShell}.
+ * Filters navigation items based on the user's role flags so that admin-only
+ * routes are hidden from students and supervisors.
+ * Includes a collapse toggle that switches between full-label and icon-only modes.
+ *
+ * @param props - Component props.
+ * @param props.user - The authenticated user, used for role-based nav filtering.
+ * @param props.collapsed - Whether the sidebar is in icon-only collapsed mode.
+ */
 export function Sidebar({ user, collapsed }: SidebarProps) {
 	const visibleItems = navItems.filter((item) => {
 		if (!item.roles) return true

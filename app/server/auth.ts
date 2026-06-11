@@ -18,6 +18,21 @@ configure({
 
 export { authkitLoader, getSignInUrl, signOut }
 
+/**
+ * Resolves the authenticated user from the WorkOS session and returns their
+ * database record. Handles two special cases on first sign-in:
+ *
+ * 1. **Bootstrap provisioning** — if `BOOTSTRAP_ADMIN_EMAIL` matches the signed-in
+ *    email and no non-system users exist yet, a new Admin account is created automatically.
+ * 2. **WorkOS ID reconciliation** — if an admin pre-created the account by email only,
+ *    `workosId` is linked to the database record on first login.
+ *
+ * @param request - The incoming HTTP request containing the session cookie.
+ * @returns The authenticated user's database record.
+ * @throws {Response} Redirects to `/login` if the session is missing or invalid.
+ * @throws {Response} Redirects to `/login?error=not_provisioned` if the email has
+ *   no pre-provisioned account and is not the bootstrap admin email.
+ */
 export async function requireUser(request: Request) {
 	const { user } = await withAuth({ request } as Parameters<typeof withAuth>[0])
 
@@ -51,12 +66,30 @@ export async function requireUser(request: Request) {
 	return dbUser
 }
 
+/**
+ * Calls {@link requireUser} then verifies the user holds the specified role flag.
+ *
+ * @param request - The incoming HTTP request.
+ * @param flag - A {@link Role} constant (or combined bitmask) to check.
+ * @returns The authenticated user's database record.
+ * @throws {Response} Redirects to `/` if the user does not hold the required role.
+ */
 export async function requireRole(request: Request, flag: number) {
 	const user = await requireUser(request)
 	if (!hasRole(user.role, flag)) throw redirect("/")
 	return user
 }
 
+/**
+ * Guards the application layout. Supervisors and Admins always pass regardless of
+ * team or semester state. Students are redirected to `/no-active-team` if they have
+ * no team membership in a currently active semester.
+ *
+ * @param request - The incoming HTTP request.
+ * @returns The authenticated user's database record.
+ * @throws {Response} All redirects from {@link requireUser}.
+ * @throws {Response} Redirects to `/no-active-team` for students with no active team.
+ */
 export async function requireActiveTeam(request: Request) {
 	const dbUser = await requireUser(request)
 

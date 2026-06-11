@@ -11,6 +11,11 @@ import {
 import type { Route } from "./+types/root"
 import styles from "./styles/main.scss?url"
 
+/**
+ * Returns the stylesheet `<link>` elements injected into every page's `<head>`.
+ * Includes app styles, PrimeReact base CSS, PrimeIcons, and the initial lara-light-purple
+ * theme (swapped at runtime by {@link useColorScheme}).
+ */
 export const links: Route.LinksFunction = () => [
 	{ rel: "stylesheet", href: styles },
 	{ rel: "stylesheet", href: "/primereact.min.css" },
@@ -28,6 +33,13 @@ const queryClient = new QueryClient({
 	},
 })
 
+/**
+ * HTML document shell shared by all routes.
+ * Renders `<html>`, `<head>` (with meta, links), and `<body>` (with scroll restoration and scripts).
+ *
+ * @param props - Props injected by React Router.
+ * @param props.children - The rendered route tree.
+ */
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="en">
@@ -46,6 +58,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	)
 }
 
+/**
+ * Root app component. Wraps the route outlet with TanStack Query and PrimeReact providers.
+ * PrimeReact is initialised with `ripple: true` and `unstyled: false` to keep
+ * the default PrimeReact styling active alongside Tailwind utility classes.
+ */
 export default function App() {
 	return (
 		<QueryClientProvider client={queryClient}>
@@ -56,6 +73,13 @@ export default function App() {
 	)
 }
 
+/**
+ * Top-level error boundary displayed when an unhandled error reaches the root.
+ * Shows a 404 message for not-found responses, the error message in development,
+ * or a generic fallback in production.
+ *
+ * @param props - Props injected by React Router containing the caught error.
+ */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 	let message = "Oops!"
 	let details = "An unexpected error occurred."

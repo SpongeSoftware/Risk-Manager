@@ -1,5 +1,6 @@
 import { z } from "zod/v4"
 
+/** Validation schema for the admin "Create Semester" form (`/admin/semesters/new`). */
 export const createSemesterSchema = z.object({
 	name: z.string().min(2, "Semester name must be at least 2 characters"),
 	year: z.coerce.number().int().min(2000).max(2100),
@@ -9,4 +10,5 @@ export const createSemesterSchema = z.object({
 	isActive: z.coerce.boolean().default(true),
 })
 
+/** Inferred TypeScript type for the create semester form payload. */
 export type CreateSemesterInput = z.infer<typeof createSemesterSchema>

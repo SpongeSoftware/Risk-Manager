@@ -13,9 +13,17 @@ const labels: Record<Framework, string> = {
 }
 
 interface FrameworkTagProps {
+	/** The compliance framework the assessment is aligned with. */
 	framework: Framework
 }
 
+/**
+ * Displays a colour-coded inline tag for an assessment's compliance framework.
+ * Colours: ISO 27001 (blue) · SOC 2 (teal) · BOTH (purple).
+ *
+ * @param props - Component props.
+ * @param props.framework - One of `"ISO27001"`, `"SOC2"`, or `"BOTH"`.
+ */
 export function FrameworkTag({ framework }: FrameworkTagProps) {
 	return (
 		<span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${styles[framework]}`}>

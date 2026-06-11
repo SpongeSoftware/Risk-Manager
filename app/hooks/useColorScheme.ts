@@ -5,6 +5,18 @@ import { setColorScheme, appStore, type ColorScheme } from "../store"
 const LIGHT_THEME = "/themes/lara-light-purple/theme.css"
 const DARK_THEME = "/themes/lara-dark-purple/theme.css"
 
+/**
+ * Synchronises the active colour scheme with the DOM on every change.
+ * Performs two side effects:
+ * - Swaps the `href` on the `#primereact-theme` `<link>` element between the
+ *   lara-light-purple and lara-dark-purple PrimeReact theme files.
+ * - Toggles `class="dark"` on `<html>` for Tailwind dark-mode variants.
+ *
+ * When the scheme is `"system"`, the hook listens to the
+ * `prefers-color-scheme` media query and re-applies on OS preference changes.
+ *
+ * @returns An object with `colorScheme` (current value) and `setColorScheme` (setter).
+ */
 export function useColorScheme() {
 	const colorScheme = useStore(appStore, (s) => s.colorScheme)
 
