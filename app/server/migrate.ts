@@ -2,7 +2,7 @@ import { createClient } from "@libsql/client"
 import { drizzle } from "drizzle-orm/libsql"
 import { migrate } from "drizzle-orm/libsql/migrator"
 import { mkdirSync } from "fs"
-import { Role } from "./schema"
+import { Role } from "./schema.ts"
 
 const url = process.env["TURSO_DATABASE_URL"] ?? "file:./data/db.sqlite"
 if (url.startsWith("file:")) {

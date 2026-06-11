@@ -18,30 +18,13 @@ interface NavItem {
 const navItems: NavItem[] = [
 	{ to: "/", icon: "pi pi-home", label: "Dashboard" },
 	{ to: "/teams", icon: "pi pi-users", label: "Teams" },
-	{
-		to: "/admin/users",
-		icon: "pi pi-user",
-		label: "Users",
-		roles: [Role.Admin],
-	},
-	{
-		to: "/admin/teams",
-		icon: "pi pi-sitemap",
-		label: "Manage Teams",
-		roles: [Role.Admin],
-	},
-	{
-		to: "/admin/semesters",
-		icon: "pi pi-calendar",
-		label: "Semesters",
-		roles: [Role.Admin],
-	},
-	{
-		to: "/admin/audits",
-		icon: "pi pi-list",
-		label: "All Audits",
-		roles: [Role.Admin],
-	},
+]
+
+const adminItems: NavItem[] = [
+	{ to: "/admin/users", icon: "pi pi-user", label: "Users" },
+	{ to: "/admin/teams", icon: "pi pi-sitemap", label: "Teams" },
+	{ to: "/admin/semesters", icon: "pi pi-calendar", label: "Semesters" },
+	{ to: "/admin/audits", icon: "pi pi-list", label: "Audit Log" },
 ]
 
 /**
@@ -54,11 +37,25 @@ const navItems: NavItem[] = [
  * @param props.user - The authenticated user, used for role-based nav filtering.
  * @param props.collapsed - Whether the sidebar is in icon-only collapsed mode.
  */
+function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
+	return (
+		<NavLink
+			to={item.to}
+			end={item.to === "/"}
+			className={({ isActive }) =>
+				`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-700 ${
+					isActive ? "bg-purple-700 text-white" : "text-surface-300"
+				}`
+			}
+		>
+			<i className={`${item.icon} text-lg`} />
+			{!collapsed && <span className="text-sm font-medium">{item.label}</span>}
+		</NavLink>
+	)
+}
+
 export function Sidebar({ user, collapsed }: SidebarProps) {
-	const visibleItems = navItems.filter((item) => {
-		if (!item.roles) return true
-		return item.roles.some((r) => hasRole(user.role, r))
-	})
+	const isAdmin = hasRole(user.role, Role.Admin)
 
 	return (
 		<aside className={`sidebar bg-surface-900 text-white flex flex-col ${collapsed ? "collapsed" : ""}`}>
@@ -77,21 +74,23 @@ export function Sidebar({ user, collapsed }: SidebarProps) {
 			</div>
 
 			<nav className="flex-1 py-4">
-				{visibleItems.map((item) => (
-					<NavLink
-						key={item.to}
-						to={item.to}
-						end={item.to === "/"}
-						className={({ isActive }) =>
-							`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-700 ${
-								isActive ? "bg-purple-700 text-white" : "text-surface-300"
-							}`
-						}
-					>
-						<i className={`${item.icon} text-lg`} />
-						{!collapsed && <span className="text-sm font-medium">{item.label}</span>}
-					</NavLink>
+				{navItems.map((item) => (
+					<NavItem key={item.to} item={item} collapsed={collapsed} />
 				))}
+
+				{isAdmin && (
+					<>
+						<div className="mx-4 my-3 border-t border-surface-700" />
+						{!collapsed && (
+							<p className="px-4 pb-1 text-xs font-semibold uppercase tracking-wider text-surface-500">
+								Administration
+							</p>
+						)}
+						{adminItems.map((item) => (
+							<NavItem key={item.to} item={item} collapsed={collapsed} />
+						))}
+					</>
+				)}
 			</nav>
 		</aside>
 	)

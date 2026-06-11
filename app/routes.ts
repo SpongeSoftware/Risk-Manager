@@ -19,6 +19,7 @@ export default [
 		route("teams/:teamId/report", "routes/app.teams.$teamId.report.tsx"),
 		route("teams/:teamId/audits", "routes/app.teams.$teamId.audits.tsx"),
 
+		route("admin", "routes/app.admin._index.tsx"),
 		route("admin/users", "routes/app.admin.users.tsx"),
 		route("admin/teams", "routes/app.admin.teams._index.tsx"),
 		route("admin/teams/new", "routes/app.admin.teams.new.tsx"),

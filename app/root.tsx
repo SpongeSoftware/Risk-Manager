@@ -10,6 +10,7 @@ import {
 } from "react-router"
 import type { Route } from "./+types/root"
 import styles from "./styles/main.scss?url"
+import tailwind from "./styles/tailwind.css?url"
 
 /**
  * Returns the stylesheet `<link>` elements injected into every page's `<head>`.
@@ -17,6 +18,7 @@ import styles from "./styles/main.scss?url"
  * theme (swapped at runtime by {@link useColorScheme}).
  */
 export const links: Route.LinksFunction = () => [
+	{ rel: "stylesheet", href: tailwind },
 	{ rel: "stylesheet", href: styles },
 	{ rel: "stylesheet", href: "/primereact.min.css" },
 	{ rel: "stylesheet", href: "/primeicons.css" },
