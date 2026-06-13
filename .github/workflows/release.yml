@@ -89,10 +89,8 @@ jobs:
 
           if [ -n "$DIRECT_COMMITS" ]; then
             CURRENT_NOTES=$(gh release view "${{ steps.version.outputs.new_version }}" --json body -q .body)
-            gh release edit "${{ steps.version.outputs.new_version }}" --notes "${CURRENT_NOTES}
-
-## Direct Commits
-${DIRECT_COMMITS}"
+            UPDATED_NOTES=$(printf '%s\n\n## Direct Commits\n%s' "$CURRENT_NOTES" "$DIRECT_COMMITS")
+            gh release edit "${{ steps.version.outputs.new_version }}" --notes "$UPDATED_NOTES"
           fi
 
       - name: Generate SBOM
