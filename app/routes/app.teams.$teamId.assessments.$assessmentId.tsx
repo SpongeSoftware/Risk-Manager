@@ -708,3 +708,12 @@ export default function AssessmentDetailPage({ loaderData, actionData }: Route.C
 		</div>
 	)
 }
+
+export function ErrorBoundary() {
+	return (
+		<div className="p-8">
+			<h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
+			<p className="text-sm" style={{ color: "var(--text-color-secondary)" }}>Please try refreshing the page.</p>
+		</div>
+	)
+}
