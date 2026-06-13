@@ -1,16 +1,19 @@
 import { useState } from "react"
 import { data, redirect, useNavigate } from "react-router"
+import type { Route } from "./+types/app.teams.$teamId.assessments.new"
+
 import { InputText } from "primereact/inputtext"
 import { Dropdown } from "primereact/dropdown"
 import { Button } from "primereact/button"
 import { Message } from "primereact/message"
-import type { Route } from "./+types/app.teams.$teamId.assessments.new"
 import { requireUser, requireUserLoader } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
 import { getTeamById, createAssessment } from "../server/queries"
 import { z } from "zod/v4"
 import { createAssessmentSchema } from "../lib/schemas/assessment"
 import { appendAudit } from "../server/queries/audits"
+
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — New Assessment" }]
 
 export async function loader(args: Route.LoaderArgs) {
 	return requireUserLoader(args, async (user) => {

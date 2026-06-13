@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { data, Form } from "react-router"
 import { Link } from "react-router"
+import type { Route } from "./+types/app.teams.$teamId.members"
+
 import { useActionToast } from "../hooks/useActionToast"
 import { useFlashToast } from "../hooks/useFlashToast"
 import { DataTable } from "primereact/datatable"
@@ -13,7 +15,6 @@ import { InputText } from "primereact/inputtext"
 import { IconField } from "primereact/iconfield"
 import { InputIcon } from "primereact/inputicon"
 import { FilterMatchMode } from "primereact/api"
-import type { Route } from "./+types/app.teams.$teamId.members"
 import { requireUser, requireUserLoader } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
 import { getTeamById, getTeamMembers, addTeamMember, removeTeamMember } from "../server/queries"
@@ -21,6 +22,8 @@ import { getAllUsers } from "../server/queries/users"
 import { appendAudit } from "../server/queries/audits"
 import { z } from "zod/v4"
 import { addTeamMemberSchema } from "../lib/schemas/team"
+
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Team Members" }]
 
 export async function loader(args: Route.LoaderArgs) {
 	return requireUserLoader(args, async (user) => {

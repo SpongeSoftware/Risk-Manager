@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" fill="none">
+  <!-- Shield icon -->
+  <path d="M20 4L7 9.5v5c0 6.56 4.88 12.69 11.25 14.19C24.62 27.19 29.5 21.06 29.5 14.5v-5L20 4z" fill="#8b5cf6"/>
+  <!-- Checkmark on shield -->
+  <path d="M15.5 14.5l2.5 2.5 5-5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Wordmark -->
+  <text x="38" y="26" font-family="Inter, system-ui, sans-serif" font-size="16" font-weight="700" fill="currentColor">Risk Manager</text>
+</svg>

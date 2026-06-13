@@ -22,7 +22,10 @@ import tailwind from "./styles/tailwind.css?url"
  * Includes app styles, PrimeReact base CSS, PrimeIcons, and the initial lara-light-purple
  * theme (swapped at runtime by {@link useColorScheme}).
  */
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management" }]
+
 export const links: Route.LinksFunction = () => [
+	{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
 	{ rel: "stylesheet", href: tailwind },
 	{ rel: "stylesheet", href: styles },
 	{ rel: "stylesheet", href: "/primereact.min.css" },

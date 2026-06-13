@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { data, redirect, useFetcher, useRevalidator, Form } from "react-router"
+import type { Route } from "./+types/app.admin.users"
+
 import { InputText } from "primereact/inputtext"
 import { Dropdown } from "primereact/dropdown"
 import { Button } from "primereact/button"
@@ -11,7 +13,6 @@ import { Card } from "primereact/card"
 import { IconField } from "primereact/iconfield"
 import { InputIcon } from "primereact/inputicon"
 import { FilterMatchMode } from "primereact/api"
-import type { Route } from "./+types/app.admin.users"
 import { useActionToast } from "../hooks/useActionToast"
 import { useFlashToast } from "../hooks/useFlashToast"
 import { requireRole, requireRoleLoader } from "../server/auth"
@@ -24,6 +25,8 @@ import {
 	softDeleteUser,
 	getAdminUserCount,
 } from "../server/queries/users"
+
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Users" }]
 import { z } from "zod/v4"
 import { createUserSchema, updateUserRoleSchema } from "../lib/schemas/user"
 import { appendAudit } from "../server/queries/audits"

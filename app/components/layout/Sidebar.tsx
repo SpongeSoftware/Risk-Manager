@@ -62,8 +62,10 @@ export function Sidebar({ user, collapsed }: SidebarProps) {
 	return (
 		<aside className={`sidebar flex flex-col ${collapsed ? "collapsed" : ""}`}>
 			<div className="sidebar-header flex items-center justify-between px-4 py-4 border-b">
-				{!collapsed && (
-					<span className="sidebar-title font-bold text-lg">Risk Manager</span>
+				{collapsed ? (
+					<img src="/favicon.svg" alt="Risk Manager" className="h-7 w-7" />
+				) : (
+					<img src="/logo.svg" alt="Risk Manager" className="h-8" />
 				)}
 				<Button
 					icon={`pi ${collapsed ? "pi-bars" : "pi-times"}`}

@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { data, Form } from "react-router"
 import { useNavigate } from "react-router"
+import type { Route } from "./+types/app.admin.semesters._index"
+
 import { useActionToast } from "../hooks/useActionToast"
 import { useFlashToast } from "../hooks/useFlashToast"
 import { DataTable } from "primereact/datatable"
@@ -11,11 +13,12 @@ import { InputText } from "primereact/inputtext"
 import { IconField } from "primereact/iconfield"
 import { InputIcon } from "primereact/inputicon"
 import { FilterMatchMode } from "primereact/api"
-import type { Route } from "./+types/app.admin.semesters._index"
 import { requireRole, requireRoleLoader } from "../server/auth"
 import { Role } from "../server/schema"
 import { getAllSemesters, updateSemesterActive, softDeleteSemester, getSemesterById } from "../server/queries"
 import { appendAudit } from "../server/queries/audits"
+
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Semesters" }]
 
 export async function loader(args: Route.LoaderArgs) {
 	return requireRoleLoader(args, Role.Admin, async () => {

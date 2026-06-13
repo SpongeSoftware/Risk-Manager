@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { data, redirect, Form } from "react-router"
 import { useNavigate } from "react-router"
+import type { Route } from "./+types/app.admin.semesters.new"
+
 import { InputText } from "primereact/inputtext"
 import { InputNumber } from "primereact/inputnumber"
 import { Dropdown } from "primereact/dropdown"
@@ -8,13 +10,14 @@ import { Calendar } from "primereact/calendar"
 import { Button } from "primereact/button"
 import { Message } from "primereact/message"
 import { Card } from "primereact/card"
-import type { Route } from "./+types/app.admin.semesters.new"
 import { requireRole, requireRoleLoader } from "../server/auth"
 import { Role } from "../server/schema"
 import { createSemester } from "../server/queries"
 import { z } from "zod/v4"
 import { createSemesterSchema } from "../lib/schemas/semester"
 import { appendAudit } from "../server/queries/audits"
+
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — New Semester" }]
 
 export async function loader(args: Route.LoaderArgs) {
 	return requireRoleLoader(args, Role.Admin, () => ({}))

@@ -2,6 +2,8 @@ import { getSignInUrl } from "@workos-inc/authkit-react-router"
 import { data } from "react-router"
 import type { Route } from "./+types/auth.login"
 
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Sign In" }]
+
 export async function loader({ request }: Route.LoaderArgs) {
 	const error = new URL(request.url).searchParams.get("error")
 	const { url, headers } = await getSignInUrl("/", request)

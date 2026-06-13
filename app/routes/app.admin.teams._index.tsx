@@ -1,5 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
+import type { Route } from "./+types/app.admin.teams._index"
+
 import { DataTable } from "primereact/datatable"
 import { Column } from "primereact/column"
 import { Button } from "primereact/button"
@@ -8,10 +10,11 @@ import { InputText } from "primereact/inputtext"
 import { IconField } from "primereact/iconfield"
 import { InputIcon } from "primereact/inputicon"
 import { FilterMatchMode } from "primereact/api"
-import type { Route } from "./+types/app.admin.teams._index"
 import { requireRoleLoader } from "../server/auth"
 import { Role } from "../server/schema"
 import { getAllTeams } from "../server/queries"
+
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Teams" }]
 
 export async function loader(args: Route.LoaderArgs) {
 	return requireRoleLoader(args, Role.Admin, async () => {

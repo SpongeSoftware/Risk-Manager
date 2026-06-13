@@ -3,6 +3,8 @@ import { Tag } from "primereact/tag"
 import { Card } from "primereact/card"
 import { Skeleton } from "primereact/skeleton"
 import type { Route } from "./+types/app._index"
+
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Dashboard" }]
 import { requireUserLoader } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
 import { getTeamsForSupervisor, getActiveTeamsForUser } from "../server/queries"

@@ -1,16 +1,19 @@
 import { useState } from "react"
 import { DataTable } from "primereact/datatable"
+import type { Route } from "./+types/app.admin.audits"
+
 import { Column } from "primereact/column"
 import { InputText } from "primereact/inputtext"
 import { IconField } from "primereact/iconfield"
 import { InputIcon } from "primereact/inputicon"
 import { FilterMatchMode } from "primereact/api"
-import type { Route } from "./+types/app.admin.audits"
 import { requireRoleLoader } from "../server/auth"
 import type { Audit } from "../server/schema"
 import { Role } from "../server/schema"
 import { getAllAudits } from "../server/queries/audits"
 import { formatDateTime } from "../lib/formatters"
+
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Audit Log" }]
 
 export async function loader(args: Route.LoaderArgs) {
 	return requireRoleLoader(args, Role.Admin, async () => {

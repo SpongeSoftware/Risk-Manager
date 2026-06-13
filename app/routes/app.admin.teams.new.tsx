@@ -1,17 +1,20 @@
 import { useState } from "react"
 import { data, redirect } from "react-router"
 import { useNavigate } from "react-router"
+import type { Route } from "./+types/app.admin.teams.new"
+
 import { InputText } from "primereact/inputtext"
 import { Dropdown } from "primereact/dropdown"
 import { Button } from "primereact/button"
 import { Message } from "primereact/message"
-import type { Route } from "./+types/app.admin.teams.new"
 import { requireRole, requireRoleLoader } from "../server/auth"
 import { Role } from "../server/schema"
 import { getActiveSemesters, createTeam } from "../server/queries"
 import { z } from "zod/v4"
 import { createTeamSchema } from "../lib/schemas/team"
 import { appendAudit } from "../server/queries/audits"
+
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — New Team" }]
 
 export async function loader(args: Route.LoaderArgs) {
 	return requireRoleLoader(args, Role.Admin, async () => {
