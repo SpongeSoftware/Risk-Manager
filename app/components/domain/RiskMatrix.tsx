@@ -57,9 +57,8 @@ export function RiskMatrix({ items }: RiskMatrixProps) {
 									<span>{score}</span>
 									{count > 0 && (
 										<span
-											className="rounded-full text-white flex items-center justify-center mt-0.5"
+											className="rounded-full text-white flex items-center justify-center mt-0.5 bg-surface-900 dark:bg-surface-0"
 											style={{
-												background: "var(--surface-900)",
 												minWidth: "1.1rem",
 												height: "1.1rem",
 												fontSize: "0.65rem",
