@@ -256,7 +256,7 @@ Sign in with your `BOOTSTRAP_ADMIN_EMAIL` to complete first-time setup.
 
 ### Subsequent deploys
 
-After the initial setup, all future deploys are triggered by creating a release via GitHub Actions. See [Creating Releases](#creating-releases) below.
+After the initial setup, all future deploys are handled automatically by Fly.io's GitHub integration — merging a PR to `main` triggers both a release (tag + GitHub Release + SBOM) and a production deployment. See [Creating Releases](#creating-releases) for details.
 
 ---
 
@@ -322,36 +322,13 @@ The `fly certs add` command is idempotent — it is safe to include in your depl
 
 ## GitHub Secrets Setup
 
-All production credentials are stored as GitHub repository secrets. The release workflow syncs them to Fly.io automatically — you never need to run `fly secrets set` manually after initial setup.
+Production credentials are managed directly in Fly.io (via the dashboard or `fly secrets set`) and are not required as GitHub secrets. Fly.io's GitHub integration handles its own authentication.
 
-### Adding secrets
-
-Go to **GitHub → Repository → Settings → Secrets and variables → Actions → Secrets tab**, then add each of the following:
+The only GitHub secret you may want to add is for Sentry source map uploads at build time (optional):
 
 | Secret | Where it's used | Description |
 |---|---|---|
-| `FLY_API_TOKEN` | Deploy to Fly | Generate at [fly.io/user/personal_access_tokens](https://fly.io/user/personal_access_tokens) |
-| `TURSO_DATABASE_URL` | Fly runtime | `libsql://your-db.turso.io` |
-| `TURSO_AUTH_TOKEN` | Fly runtime | Turso database auth token |
-| `WORKOS_CLIENT_ID` | Fly runtime | WorkOS application client ID |
-| `WORKOS_API_KEY` | Fly runtime | WorkOS API secret key |
-| `WORKOS_REDIRECT_URI` | Fly runtime | Production callback URL — `https://risk-manager.fly.dev/callback` |
-| `WORKOS_COOKIE_PASSWORD` | Fly runtime | 32+ character cookie encryption secret |
-| `BOOTSTRAP_ADMIN_EMAIL` | Fly runtime | First admin email (can be removed after first login) |
-| `SENTRY_DSN` | Fly runtime | Sentry project DSN |
-| `SENTRY_ORG` | Fly runtime + build | Sentry organisation slug |
-| `SENTRY_PROJECT` | Fly runtime + build | Sentry project slug |
-| `SENTRY_AUTH_TOKEN` | Build only | Source map upload token — **not** sent to Fly |
-
-> **`SENTRY_AUTH_TOKEN`** is only used at build time to upload source maps to Sentry. It is intentionally not synced to Fly's runtime environment.
-
-### Optional: custom domain variable
-
-If you have a custom domain, add one **variable** (not a secret) in the **Variables tab**:
-
-| Variable | Description |
-|---|---|
-| `FLY_CUSTOM_DOMAIN` | e.g. `riskmanager.youruniversity.edu` — triggers automatic cert provisioning on each release |
+| `SENTRY_AUTH_TOKEN` | CI build | Source map upload token with `project:releases` and `org:read` scopes — enables readable stack traces in Sentry |
 
 ---
 
@@ -371,49 +348,52 @@ Runs three parallel jobs against every PR targeting `main`. All three must pass 
 | `lint` | ESLint strict — zero warnings or errors required |
 | `build` | Production build — must compile without errors |
 
-Merging to `main` does **not** trigger a deployment. Production is only updated via a tagged release.
+Merging to `main` triggers the release workflow automatically (patch version bump) and Fly.io's GitHub integration deploys the updated code to production.
 
-### Release — triggered manually by admins
+### Release — runs automatically on every merge to `main`
 
 **File:** `.github/workflows/release.yml`
 
-Only users with **write access** (admins/owners) can trigger this workflow. It:
+Fires on every push to `main` (i.e. every merged PR). It:
 
 1. Computes the next semantic version from the last git tag
 2. Creates and pushes the git tag
 3. Creates a GitHub Release with auto-generated changelog
-4. Syncs all GitHub Secrets to Fly.io as runtime environment variables
-5. Deploys the Docker image to Fly.io with the version label
-6. Runs database migrations on the live instance
-7. Generates a Software Bill of Materials (SBOM) and attaches it to the release
+4. Generates a Software Bill of Materials (SBOM) and attaches it to the release
 
-See [Creating Releases](#creating-releases) for how to trigger this workflow.
+Deployment is handled separately by Fly.io's GitHub integration, which deploys to production automatically whenever code reaches `main`.
+
+The `workflow_dispatch` trigger is also available for admins who need to manually choose a `minor` or `major` bump instead of the default `patch`.
+
+See [Creating Releases](#creating-releases) for details.
 
 ---
 
 ## Creating Releases
 
-Releases follow [semantic versioning](https://semver.org) starting from `v0.1.0`. The version is computed and tagged automatically — you only choose the bump type.
+Releases follow [semantic versioning](https://semver.org) starting from `v0.1.0`. The version is computed and tagged automatically — **no manual steps required for a standard patch release**.
 
-**Who can release:** Only repository admins and owners. Tag protection rules prevent non-admins from creating `v*` tags, and `workflow_dispatch` requires write access.
+**Who can release:** Only repository admins and owners. Tag protection rules prevent non-admins from creating `v*` tags.
 
-### Steps
+### Standard release (patch bump)
 
-1. Merge all PRs for the release into `main`
-2. Go to **GitHub → Repository → Actions → Release**
-3. Click **"Run workflow"** (top right)
-4. Select the bump type:
-   - **`patch`** — bug fixes and minor changes (e.g. `v0.1.0` → `v0.1.1`)
-   - **`minor`** — new features, backwards-compatible (e.g. `v0.1.1` → `v0.2.0`)
-   - **`major`** — breaking changes (e.g. `v0.2.0` → `v1.0.0`)
-5. Click **"Run workflow"**
-
-The workflow runs automatically (~5 minutes) and:
+Simply merge a PR into `main`. The release workflow fires automatically and within ~1 minute:
 - Creates the git tag and GitHub Release with a generated changelog
   - PR-based changes are grouped by label (features, bug fixes, etc.)
   - Direct commits to `main` not associated with a PR are appended in a separate **Direct Commits** section
-- Deploys to Fly.io
 - Attaches `sbom-vX.Y.Z.spdx.json` to the release assets
+
+Fly.io's GitHub integration deploys the updated code to production in parallel.
+
+### Manual release (minor or major bump)
+
+1. Go to **GitHub → Repository → Actions → Release**
+2. Click **"Run workflow"** (top right)
+3. Select the bump type:
+   - **`patch`** — bug fixes and minor changes (e.g. `v0.1.0` → `v0.1.1`)
+   - **`minor`** — new features, backwards-compatible (e.g. `v0.1.1` → `v0.2.0`)
+   - **`major`** — breaking changes (e.g. `v0.2.0` → `v1.0.0`)
+4. Click **"Run workflow"**
 
 ### Labelling PRs for the changelog
 
@@ -442,7 +422,7 @@ This is a **public repository** — anyone can read and fork the code. All write
 | CI must pass before merge | Branch protection — `typecheck`, `lint`, `build` required |
 | All PRs require owner review | `.github/CODEOWNERS` — `@ElCapitanSponge` must approve every PR |
 | Only admins can create releases | Tag protection ruleset on `v*` + `workflow_dispatch` requires write access |
-| Secrets never in code | All credentials stored as GitHub Secrets, synced to Fly at release time |
+| Secrets never in code | All credentials stored as Fly.io secrets via dashboard or CLI — no GitHub secrets required for deployment |
 
 ### One-time setup (run after creating the repo)
 
