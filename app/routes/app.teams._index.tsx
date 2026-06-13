@@ -1,26 +1,26 @@
 import { redirect } from "react-router"
 import type { Route } from "./+types/app.teams._index"
-import { requireUser } from "../server/auth"
+import { requireUserLoader } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
 import { getAllTeams, getActiveTeamsForUser, getTeamsForSupervisor } from "../server/queries"
 
-export async function loader({ request }: Route.LoaderArgs) {
-	const user = await requireUser(request)
+export async function loader(args: Route.LoaderArgs) {
+	return requireUserLoader(args, async (user) => {
+		if (hasRole(user.role, Role.Admin)) {
+			const teams = await getAllTeams()
+			return { user, teams }
+		}
 
-	if (hasRole(user.role, Role.Admin)) {
-		const teams = await getAllTeams()
+		if (hasRole(user.role, Role.Supervisor)) {
+			const { teamsShowInactive } = { teamsShowInactive: false }
+			const teams = await getTeamsForSupervisor(user.id, !teamsShowInactive)
+			return { user, teams }
+		}
+
+		const teams = await getActiveTeamsForUser(user.id)
+		if (teams.length === 1) throw redirect(`/teams/${teams[0]!.id}`)
 		return { user, teams }
-	}
-
-	if (hasRole(user.role, Role.Supervisor)) {
-		const { teamsShowInactive } = { teamsShowInactive: false }
-		const teams = await getTeamsForSupervisor(user.id, !teamsShowInactive)
-		return { user, teams }
-	}
-
-	const teams = await getActiveTeamsForUser(user.id)
-	if (teams.length === 1) throw redirect(`/teams/${teams[0]!.id}`)
-	return { user, teams }
+	})
 }
 
 export default function TeamsPage({ loaderData }: Route.ComponentProps) {

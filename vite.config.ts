@@ -10,6 +10,9 @@ export default defineConfig({
 	build: {
 		sourcemap: isProd,
 	},
+	ssr: {
+		noExternal: ["primereact"],
+	},
 	plugins: [
 		tailwindcss(),
 		reactRouter(),

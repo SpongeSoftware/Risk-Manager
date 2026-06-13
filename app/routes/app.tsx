@@ -6,14 +6,14 @@ import { requireActiveTeam } from "../server/auth"
 
 export async function loader(args: Route.LoaderArgs) {
 	return authkitLoader(args, async ({ request }: { request: Request }) => {
-		const user = await requireActiveTeam(request)
-		return { user }
+		const currentUser = await requireActiveTeam(request)
+		return { currentUser }
 	})
 }
 
 export default function AppLayout({ loaderData }: Route.ComponentProps) {
 	return (
-		<AppShell user={loaderData.user}>
+		<AppShell user={loaderData.currentUser}>
 			<Outlet />
 		</AppShell>
 	)

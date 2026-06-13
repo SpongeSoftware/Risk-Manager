@@ -1,0 +1,1 @@
+onlyBuiltDependencies = ["@parcel/watcher", "@sentry/cli", "esbuild", "lightningcss"]

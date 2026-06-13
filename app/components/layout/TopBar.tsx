@@ -30,38 +30,37 @@ export function TopBar({ user }: TopBarProps) {
 	const colorScheme = useStore(appStore, (s) => s.colorScheme)
 
 	return (
-		<header className="topbar bg-surface-0 dark:bg-surface-800 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between px-6">
-			<h2 className="text-lg font-semibold text-surface-700 dark:text-surface-200">
+		<header className="topbar border-b flex items-center justify-between px-6">
+			<h2 className="topbar-title text-lg font-semibold">
 				Risk Assessment Platform
 			</h2>
 
 			<div className="flex items-center gap-4">
 				{/* Theme toggle */}
-				<div className="flex gap-1 bg-surface-100 dark:bg-surface-700 rounded-lg p-1">
+				<div className="theme-switcher flex gap-1 rounded-lg p-1">
 					{schemeOptions.map((opt) => (
-						<button
+						<Button
 							key={opt.value}
 							type="button"
-							onClick={() => setColorScheme(opt.value)}
+							icon={opt.icon}
+							text
+							rounded
+							size="small"
 							title={opt.label}
-							className={`p-2 rounded transition-colors ${
-								colorScheme === opt.value
-									? "bg-purple-600 text-white"
-									: "text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-600"
-							}`}
-						>
-							<i className={opt.icon} />
-						</button>
+							onClick={() => setColorScheme(opt.value)}
+							className={`theme-btn${colorScheme === opt.value ? " active" : ""}`}
+							aria-label={opt.label}
+						/>
 					))}
 				</div>
 
 				{/* User info + sign out */}
 				<div className="flex items-center gap-3">
 					<div className="text-right">
-						<p className="text-sm font-medium text-surface-900 dark:text-surface-0">
+						<p className="topbar-username text-sm font-medium">
 							{user.fullName}
 						</p>
-						<p className="text-xs text-surface-500">{getRoleLabel(user.role)}</p>
+						<p className="topbar-role text-xs">{getRoleLabel(user.role)}</p>
 					</div>
 					<Form action="/logout" method="post">
 						<Button
