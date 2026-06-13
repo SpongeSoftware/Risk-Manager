@@ -1,10 +1,9 @@
-import { defineConfig } from "eslint/config"
 import reactPlugin from "eslint-plugin-react"
 import reactCompilerPlugin from "eslint-plugin-react-compiler"
 import reactHooksPlugin from "eslint-plugin-react-hooks"
 import tseslint from "typescript-eslint"
 
-export default defineConfig(
+export default tseslint.config(
 	{
 		ignores: ["build/**", "node_modules/**", ".react-router/**", "drizzle/**", ".storybook/**"],
 	},
@@ -51,5 +50,9 @@ export default defineConfig(
 				ignoreRestSiblings: true,
 			}],
 		},
+	},
+	{
+		files: ["eslint.config.ts"],
+		rules: { "@typescript-eslint/no-deprecated": "off" },
 	},
 )

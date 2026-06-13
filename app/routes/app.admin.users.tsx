@@ -15,7 +15,6 @@ import type { Route } from "./+types/app.admin.users"
 import { useActionToast } from "../hooks/useActionToast"
 import { useFlashToast } from "../hooks/useFlashToast"
 import { requireRole, requireRoleLoader } from "../server/auth"
-import type { User } from "../server/schema"
 import { Role } from "../server/schema"
 import { hasRole } from "../lib/roles"
 import {

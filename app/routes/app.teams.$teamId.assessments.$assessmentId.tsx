@@ -216,7 +216,7 @@ function RiskItemFields({
 	errors?: FieldErrors
 }) {
 	const showSoc2 = assessmentFramework === "SOC2" || assessmentFramework === "BOTH"
-	const [treatment, setTreatment] = useState(defaults?.treatment ?? "mitigate")
+	const [treatment, setTreatment] = useState<"mitigate" | "accept" | "transfer" | "avoid">(defaults?.treatment ?? "mitigate")
 	const [likelihood, setLikelihood] = useState<number>(defaults?.likelihood ?? 3)
 	const [impact, setImpact] = useState<number>(defaults?.impact ?? 3)
 
@@ -306,7 +306,7 @@ function RiskItemFields({
 				<input type="hidden" name="treatment" value={treatment} />
 				<Dropdown
 					value={treatment}
-					onChange={(e) => { setTreatment(e.value as string) }}
+					onChange={(e) => { setTreatment(e.value as "mitigate" | "accept" | "transfer" | "avoid") }}
 					options={treatmentOptions}
 					className="w-full"
 				/>
@@ -646,7 +646,7 @@ export default function AssessmentDetailPage({ loaderData, actionData }: Route.C
 				<h2 className="text-lg font-semibold mb-4">Risk Items</h2>
 
 				<Suspense fallback={<RiskItemsSkeleton />}>
-					<Await resolve={riskItems}>
+					<Await resolve={riskItems} errorElement={<p className="text-sm" style={{ color: "var(--red-500)" }}>Could not load risk items.</p>}>
 						{(items) => (
 							<RiskItemsSection
 								items={items}
@@ -665,7 +665,7 @@ export default function AssessmentDetailPage({ loaderData, actionData }: Route.C
 					<h2 className="text-lg font-semibold mb-4">Feedback</h2>
 
 					<Suspense fallback={<FeedbackSkeleton />}>
-						<Await resolve={feedbackList}>
+						<Await resolve={feedbackList} errorElement={<p className="text-sm" style={{ color: "var(--red-500)" }}>Could not load feedback.</p>}>
 							{(feedback: FeedbackItem[]) => (
 								<div className="space-y-3 mb-4">
 									{feedback.map((f) => (
