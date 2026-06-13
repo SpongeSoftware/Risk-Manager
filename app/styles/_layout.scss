@@ -32,3 +32,120 @@
 		}
 	}
 }
+
+// Sidebar — uses semantic surface-card, adapts automatically with theme swap
+.sidebar {
+	background-color: var(--surface-card);
+	border-right: 1px solid var(--surface-border);
+	color: var(--text-color);
+
+	.sidebar-title {
+		color: var(--primary-color);
+	}
+
+	.sidebar-toggle {
+		color: var(--text-color);
+	}
+
+	.sidebar-divider {
+		border-color: var(--surface-border);
+	}
+
+	.sidebar-section-label {
+		color: var(--text-color-secondary);
+	}
+}
+
+.sidebar-header {
+	border-color: var(--surface-border);
+}
+
+.nav-item {
+	color: var(--text-color);
+
+	&:hover {
+		background-color: var(--surface-ground);
+	}
+
+	&.active {
+		background-color: var(--primary-color);
+		color: var(--primary-color-text);
+	}
+}
+
+// TopBar — uses semantic surface-card, adapts automatically with theme swap
+// View Transitions — smooth cross-fade between pages
+@media (prefers-reduced-motion: no-preference) {
+	::view-transition-old(root),
+	::view-transition-new(root) {
+		animation-duration: 180ms;
+		animation-timing-function: ease-in-out;
+	}
+
+	::view-transition-old(root) {
+		animation-name: vt-fade-out;
+	}
+
+	::view-transition-new(root) {
+		animation-name: vt-fade-in;
+	}
+
+	@keyframes vt-fade-out {
+		from { opacity: 1; }
+		to   { opacity: 0; }
+	}
+
+	@keyframes vt-fade-in {
+		from { opacity: 0; }
+		to   { opacity: 1; }
+	}
+}
+
+// Team cards get unique view-transition-name per card so they can hero-animate
+.team-card {
+	view-transition-name: var(--vt-name);
+}
+
+// Assessment rows get unique view-transition-name so they slide into detail
+.assessment-row {
+	view-transition-name: var(--vt-name);
+}
+
+// Nav item subtle scale during transition
+.nav-item.transitioning {
+	opacity: 0.7;
+}
+
+.topbar {
+	background-color: var(--surface-card);
+	border-color: var(--surface-border);
+
+	.topbar-title {
+		color: var(--text-color);
+	}
+
+	.topbar-username {
+		color: var(--text-color);
+	}
+
+	.topbar-role {
+		color: var(--text-color-secondary);
+	}
+
+	.theme-switcher {
+		background-color: var(--surface-ground);
+	}
+
+	.theme-btn {
+		color: var(--text-color-secondary);
+
+		&:hover {
+			background-color: var(--highlight-bg);
+		}
+
+		&.active {
+			background-color: var(--primary-color);
+			color: var(--primary-color-text);
+		}
+	}
+}

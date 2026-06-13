@@ -1,4 +1,5 @@
-import { NavLink } from "react-router"
+import { NavLink, useViewTransitionState } from "react-router"
+import { Button } from "primereact/button"
 import type { User } from "../../server/schema"
 import { hasRole, Role } from "../../lib/roles"
 import { toggleSidebar } from "../../store"
@@ -38,14 +39,15 @@ const adminItems: NavItem[] = [
  * @param props.collapsed - Whether the sidebar is in icon-only collapsed mode.
  */
 function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
+	const isTransitioning = useViewTransitionState(item.to)
+
 	return (
 		<NavLink
 			to={item.to}
 			end={item.to === "/"}
+			viewTransition
 			className={({ isActive }) =>
-				`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-700 ${
-					isActive ? "bg-purple-700 text-white" : "text-surface-300"
-				}`
+				`nav-item flex items-center gap-3 px-4 py-3 transition-colors${isActive ? " active" : ""}${isTransitioning ? " transitioning" : ""}`
 			}
 		>
 			<i className={`${item.icon} text-lg`} />
@@ -58,19 +60,21 @@ export function Sidebar({ user, collapsed }: SidebarProps) {
 	const isAdmin = hasRole(user.role, Role.Admin)
 
 	return (
-		<aside className={`sidebar bg-surface-900 text-white flex flex-col ${collapsed ? "collapsed" : ""}`}>
-			<div className="flex items-center justify-between px-4 py-4 border-b border-surface-700">
+		<aside className={`sidebar flex flex-col ${collapsed ? "collapsed" : ""}`}>
+			<div className="sidebar-header flex items-center justify-between px-4 py-4 border-b">
 				{!collapsed && (
-					<span className="font-bold text-lg text-purple-400">Risk Manager</span>
+					<span className="sidebar-title font-bold text-lg">Risk Manager</span>
 				)}
-				<button
+				<Button
+					icon={`pi ${collapsed ? "pi-bars" : "pi-times"}`}
+					text
+					rounded
+					size="small"
 					onClick={toggleSidebar}
-					className="p-2 rounded hover:bg-surface-700 transition-colors ml-auto"
+					className="sidebar-toggle ml-auto"
 					aria-label="Toggle sidebar"
 					type="button"
-				>
-					<i className={`pi ${collapsed ? "pi-bars" : "pi-times"}`} />
-				</button>
+				/>
 			</div>
 
 			<nav className="flex-1 py-4">
@@ -80,9 +84,9 @@ export function Sidebar({ user, collapsed }: SidebarProps) {
 
 				{isAdmin && (
 					<>
-						<div className="mx-4 my-3 border-t border-surface-700" />
+						<div className="sidebar-divider mx-4 my-3 border-t" />
 						{!collapsed && (
-							<p className="px-4 pb-1 text-xs font-semibold uppercase tracking-wider text-surface-500">
+							<p className="sidebar-section-label px-4 pb-1 text-xs font-semibold uppercase tracking-wider">
 								Administration
 							</p>
 						)}
