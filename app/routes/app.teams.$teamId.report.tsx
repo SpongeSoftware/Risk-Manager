@@ -1,4 +1,6 @@
 import { data } from "react-router"
+import { Button } from "primereact/button"
+import { Tag } from "primereact/tag"
 import type { Route } from "./+types/app.teams.$teamId.report"
 import { requireUser } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
@@ -29,6 +31,13 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	return { team, assessments: assessmentsWithItems, generatedAt: new Date().toISOString() }
 }
 
+const levelColors: Record<string, string> = {
+	low: "text-green-600 dark:text-green-400",
+	medium: "text-yellow-600 dark:text-yellow-400",
+	high: "text-orange-600 dark:text-orange-400",
+	critical: "text-red-600 dark:text-red-400",
+}
+
 export default function ReportPage({ loaderData }: Route.ComponentProps) {
 	const { team, assessments, generatedAt } = loaderData
 	const totalRisks = assessments.reduce((sum, a) => sum + a.riskItems.length, 0)
@@ -47,17 +56,14 @@ export default function ReportPage({ loaderData }: Route.ComponentProps) {
 					</p>
 					<p className="text-xs text-surface-400 mt-1">Generated: {formatDate(generatedAt)}</p>
 				</div>
-				<button
+				<Button
+					label="Print / Export PDF"
+					icon="pi pi-print"
 					onClick={() => window.print()}
-					className="print:hidden py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition-colors"
-					type="button"
-				>
-					<i className="pi pi-print mr-2" />
-					Print / Export PDF
-				</button>
+					className="print:hidden"
+				/>
 			</div>
 
-			{/* Summary */}
 			<div className="grid grid-cols-3 gap-4 mb-8">
 				{[
 					{ label: "Total Assessments", value: assessments.length },
@@ -74,19 +80,14 @@ export default function ReportPage({ loaderData }: Route.ComponentProps) {
 				))}
 			</div>
 
-			{/* Assessment sections */}
 			{assessments.map((assessment) => (
 				<section key={assessment.id} className="mb-8 page-break-before">
-					<h2 className="text-xl font-bold text-surface-900 dark:text-surface-0 mb-1">
+					<h2 className="text-xl font-bold text-surface-900 dark:text-surface-0 mb-2">
 						{assessment.title}
 					</h2>
 					<div className="flex gap-2 mb-4">
-						<span className="text-xs px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
-							{assessment.framework}
-						</span>
-						<span className="text-xs px-2 py-1 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
-							{assessment.status}
-						</span>
+						<Tag value={assessment.framework} severity="info" />
+						<Tag value={assessment.status} severity="secondary" />
 					</div>
 
 					{assessment.riskItems.length === 0 ? (
@@ -105,12 +106,6 @@ export default function ReportPage({ loaderData }: Route.ComponentProps) {
 							<tbody>
 								{assessment.riskItems.map((item) => {
 									const level = riskLevel(item.riskScore)
-									const levelColors = {
-										low: "text-green-600 dark:text-green-400",
-										medium: "text-yellow-600 dark:text-yellow-400",
-										high: "text-orange-600 dark:text-orange-400",
-										critical: "text-red-600 dark:text-red-400",
-									}
 									return (
 										<tr key={item.id} className="border border-surface-200 dark:border-surface-700">
 											<td className="px-3 py-2">{item.assetName}</td>

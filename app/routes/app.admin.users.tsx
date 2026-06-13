@@ -1,4 +1,12 @@
+import { useState } from "react"
 import { data } from "react-router"
+import { InputText } from "primereact/inputtext"
+import { Dropdown } from "primereact/dropdown"
+import { Button } from "primereact/button"
+import { Tag } from "primereact/tag"
+import { DataTable } from "primereact/datatable"
+import { Column } from "primereact/column"
+import { Message } from "primereact/message"
 import type { Route } from "./+types/app.admin.users"
 import { requireRole } from "../server/auth"
 import { Role } from "../server/schema"
@@ -54,8 +62,71 @@ export async function action({ request }: Route.ActionArgs) {
 	return data({ ok: true })
 }
 
-export default function AdminUsersPage({ loaderData }: Route.ComponentProps) {
+const roleOptions = [
+	{ label: "Student", value: 1 },
+	{ label: "Supervisor", value: 2 },
+	{ label: "Admin", value: 4 },
+	{ label: "Supervisor + Admin", value: 6 },
+	{ label: "Student + Supervisor", value: 3 },
+]
+
+function CreateUserForm({ errors }: { errors?: Record<string, string[]> }) {
+	const [role, setRole] = useState(1)
+
+	return (
+		<div className="bg-surface-0 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 p-5 mb-6">
+			<h2 className="font-semibold text-surface-900 dark:text-surface-0 mb-4">Create Account</h2>
+			<form method="post" className="grid grid-cols-1 md:grid-cols-3 gap-4">
+				<input type="hidden" name="intent" value="create-user" />
+
+				<div>
+					<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
+						Full Name
+					</label>
+					<InputText name="fullName" required className="w-full" />
+					{errors?.fullName && <Message severity="error" text={errors.fullName[0]} className="w-full mt-1" />}
+				</div>
+
+				<div>
+					<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
+						Email
+					</label>
+					<InputText name="email" type="email" required className="w-full" />
+					{errors?.email && <Message severity="error" text={errors.email[0]} className="w-full mt-1" />}
+				</div>
+
+				<div>
+					<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
+						Student ID (optional)
+					</label>
+					<InputText name="studentId" className="w-full" />
+				</div>
+
+				<div>
+					<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
+						Role
+					</label>
+					<input type="hidden" name="role" value={role} />
+					<Dropdown
+						value={role}
+						onChange={(e) => setRole(e.value)}
+						options={roleOptions}
+						className="w-full"
+					/>
+				</div>
+
+				<div className="flex items-end">
+					<Button type="submit" label="Create" icon="pi pi-user-plus" />
+				</div>
+			</form>
+		</div>
+	)
+}
+
+export default function AdminUsersPage({ loaderData, actionData }: Route.ComponentProps) {
 	const { users } = loaderData
+	const errors = actionData && "errors" in actionData ? actionData.errors : undefined
+	const tableUsers = users.filter((u) => u.id !== "system")
 
 	return (
 		<div>
@@ -63,115 +134,41 @@ export default function AdminUsersPage({ loaderData }: Route.ComponentProps) {
 				User Management
 			</h1>
 
-			{/* Create user form */}
-			<div className="bg-surface-0 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 p-5 mb-6">
-				<h2 className="font-medium text-surface-900 dark:text-surface-0 mb-4">Create Account</h2>
-				<form method="post" className="grid grid-cols-1 md:grid-cols-3 gap-4">
-					<input type="hidden" name="intent" value="create-user" />
-					<div>
-						<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
-							Full Name
-						</label>
-						<input
-							name="fullName"
-							type="text"
-							required
-							className="w-full border border-surface-300 dark:border-surface-600 rounded-lg px-3 py-2 bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-0 text-sm"
-						/>
-					</div>
-					<div>
-						<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
-							Email
-						</label>
-						<input
-							name="email"
-							type="email"
-							required
-							className="w-full border border-surface-300 dark:border-surface-600 rounded-lg px-3 py-2 bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-0 text-sm"
-						/>
-					</div>
-					<div>
-						<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
-							Student ID (optional)
-						</label>
-						<input
-							name="studentId"
-							type="text"
-							className="w-full border border-surface-300 dark:border-surface-600 rounded-lg px-3 py-2 bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-0 text-sm"
-						/>
-					</div>
-					<div>
-						<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
-							Role
-						</label>
-						<select
-							name="role"
-							className="w-full border border-surface-300 dark:border-surface-600 rounded-lg px-3 py-2 bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-0 text-sm"
-						>
-							<option value={1}>Student</option>
-							<option value={2}>Supervisor</option>
-							<option value={4}>Admin</option>
-							<option value={6}>Supervisor + Admin</option>
-							<option value={3}>Student + Supervisor</option>
-						</select>
-					</div>
-					<div className="flex items-end">
-						<button
-							type="submit"
-							className="py-2 px-6 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition-colors"
-						>
-							Create
-						</button>
-					</div>
-				</form>
-			</div>
+			<CreateUserForm errors={errors} />
 
-			{/* Users table */}
-			<div className="bg-surface-0 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 overflow-hidden">
-				<table className="w-full text-sm">
-					<thead>
-						<tr className="bg-surface-50 dark:bg-surface-900">
-							{["Name", "Email", "Student ID", "Role", "Status", "Actions"].map((h) => (
-								<th key={h} className="px-4 py-3 text-left font-medium text-surface-600 dark:text-surface-400">
-									{h}
-								</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{users.filter((u) => u.id !== "system").map((u) => (
-							<tr key={u.id} className="border-t border-surface-100 dark:border-surface-800">
-								<td className="px-4 py-3 font-medium">{u.fullName}</td>
-								<td className="px-4 py-3 text-surface-500">{u.email}</td>
-								<td className="px-4 py-3 text-surface-500">{u.studentId ?? "—"}</td>
-								<td className="px-4 py-3">{getRoleLabel(u.role)}</td>
-								<td className="px-4 py-3">
-									{u.workosId ? (
-										<span className="text-xs text-green-600 dark:text-green-400">Linked</span>
-									) : (
-										<span className="text-xs text-yellow-600 dark:text-yellow-400">Pending</span>
-									)}
-								</td>
-								<td className="px-4 py-3">
-									<form method="post" className="inline">
-										<input type="hidden" name="intent" value="delete-user" />
-										<input type="hidden" name="userId" value={u.id} />
-										<button
-											type="submit"
-											className="text-red-500 hover:text-red-700 text-xs"
-											onClick={(e) => {
-												if (!confirm(`Delete ${u.fullName}?`)) e.preventDefault()
-											}}
-										>
-											Delete
-										</button>
-									</form>
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
+			<DataTable value={tableUsers} stripedRows emptyMessage="No users found.">
+				<Column field="fullName" header="Name" />
+				<Column field="email" header="Email" />
+				<Column header="Student ID" body={(u) => u.studentId ?? "—"} />
+				<Column header="Role" body={(u) => getRoleLabel(u.role)} />
+				<Column
+					header="Status"
+					body={(u) =>
+						u.workosId
+							? <Tag severity="success" value="Linked" />
+							: <Tag severity="warning" value="Pending" />
+					}
+				/>
+				<Column
+					header="Actions"
+					body={(u) => (
+						<form method="post" style={{ display: "inline" }}>
+							<input type="hidden" name="intent" value="delete-user" />
+							<input type="hidden" name="userId" value={u.id} />
+							<Button
+								type="submit"
+								icon="pi pi-trash"
+								severity="danger"
+								text
+								size="small"
+								onClick={(e) => {
+									if (!confirm(`Delete ${u.fullName}?`)) e.preventDefault()
+								}}
+							/>
+						</form>
+					)}
+				/>
+			</DataTable>
 		</div>
 	)
 }

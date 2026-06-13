@@ -1,4 +1,14 @@
+import { useState } from "react"
 import { data } from "react-router"
+import { InputText } from "primereact/inputtext"
+import { InputNumber } from "primereact/inputnumber"
+import { InputTextarea } from "primereact/inputtextarea"
+import { Dropdown } from "primereact/dropdown"
+import { Button } from "primereact/button"
+import { Tag } from "primereact/tag"
+import { DataTable } from "primereact/datatable"
+import { Column } from "primereact/column"
+import { Panel } from "primereact/panel"
 import type { Route } from "./+types/app.teams.$teamId.assessments.$assessmentId"
 import { requireUser } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
@@ -115,6 +125,152 @@ export async function action({ request, params }: Route.ActionArgs) {
 	throw data("Unknown intent", { status: 400 })
 }
 
+const levelColors: Record<string, string> = {
+	low: "text-green-600 dark:text-green-400",
+	medium: "text-yellow-600 dark:text-yellow-400",
+	high: "text-orange-600 dark:text-orange-400",
+	critical: "text-red-600 dark:text-red-400",
+}
+
+const treatmentOptions = [
+	{ label: "Mitigate — reduce the likelihood or impact", value: "mitigate" },
+	{ label: "Accept — tolerate the risk as-is", value: "accept" },
+	{ label: "Transfer — share via insurance or contract", value: "transfer" },
+	{ label: "Avoid — eliminate the activity causing the risk", value: "avoid" },
+]
+
+function FieldLabel({ label, help }: { label: string; help: string }) {
+	return (
+		<div className="mb-1">
+			<label className="block text-sm font-medium text-surface-600 dark:text-surface-400">
+				{label}
+			</label>
+			<p className="text-xs text-surface-400 dark:text-surface-500 mt-0.5">{help}</p>
+		</div>
+	)
+}
+
+function AddRiskItemForm({ assessmentFramework }: { assessmentFramework: string }) {
+	const showSoc2 = assessmentFramework === "SOC2" || assessmentFramework === "BOTH"
+	const [treatment, setTreatment] = useState("mitigate")
+	const [likelihood, setLikelihood] = useState<number>(3)
+	const [impact, setImpact] = useState<number>(3)
+
+	return (
+		<Panel header="Add Risk Item" toggleable collapsed className="mt-6">
+			<form method="post" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<input type="hidden" name="intent" value="add-risk-item" />
+
+				<div>
+					<FieldLabel
+						label="Asset Name"
+						help="The specific resource being assessed — e.g. 'Customer database', 'Email server', 'Employee laptops'."
+					/>
+					<InputText name="assetName" required className="w-full" />
+				</div>
+
+				<div>
+					<FieldLabel
+						label="Asset Category"
+						help="The type of asset — e.g. Hardware, Software, Data, People, Services, or Facilities."
+					/>
+					<InputText name="assetCategory" required className="w-full" />
+				</div>
+
+				<div>
+					<FieldLabel
+						label="Threat"
+						help="An event or action that could harm the asset — e.g. 'Ransomware attack', 'Unauthorised access', 'Hardware failure'."
+					/>
+					<InputText name="threat" required className="w-full" />
+				</div>
+
+				<div>
+					<FieldLabel
+						label="Vulnerability"
+						help="A weakness the threat could exploit — e.g. 'Unpatched software', 'Weak password policy', 'No off-site backup'."
+					/>
+					<InputText name="vulnerability" required className="w-full" />
+				</div>
+
+				<div>
+					<FieldLabel
+						label="Likelihood (1–5)"
+						help="How probable the threat is: 1 = Rare, 2 = Unlikely, 3 = Possible, 4 = Likely, 5 = Almost Certain."
+					/>
+					<input type="hidden" name="likelihood" value={likelihood} />
+					<InputNumber
+						value={likelihood}
+						onValueChange={(e) => setLikelihood(e.value ?? 3)}
+						min={1}
+						max={5}
+						showButtons
+						buttonLayout="horizontal"
+						decrementButtonClassName="p-button-secondary"
+						incrementButtonClassName="p-button-secondary"
+						className="w-full"
+					/>
+				</div>
+
+				<div>
+					<FieldLabel
+						label="Impact (1–5)"
+						help="Severity of harm if the threat occurs: 1 = Negligible, 2 = Minor, 3 = Moderate, 4 = Major, 5 = Catastrophic."
+					/>
+					<input type="hidden" name="impact" value={impact} />
+					<InputNumber
+						value={impact}
+						onValueChange={(e) => setImpact(e.value ?? 3)}
+						min={1}
+						max={5}
+						showButtons
+						buttonLayout="horizontal"
+						decrementButtonClassName="p-button-secondary"
+						incrementButtonClassName="p-button-secondary"
+						className="w-full"
+					/>
+				</div>
+
+				<div>
+					<FieldLabel
+						label="Treatment"
+						help="How you will respond to this risk — choose the strategy that best fits the context."
+					/>
+					<input type="hidden" name="treatment" value={treatment} />
+					<Dropdown
+						value={treatment}
+						onChange={(e) => setTreatment(e.value)}
+						options={treatmentOptions}
+						className="w-full"
+					/>
+				</div>
+
+				{showSoc2 && (
+					<div>
+						<FieldLabel
+							label="SOC2 Criteria (optional)"
+							help="The Trust Services Criteria this risk maps to — e.g. CC6.1 (logical access), CC7.2 (incident detection)."
+						/>
+						<InputText name="soc2Criteria" placeholder="e.g. CC6.1" className="w-full" />
+					</div>
+				)}
+
+				<div className="md:col-span-2">
+					<FieldLabel
+						label="Controls (optional)"
+						help="Existing or planned measures that reduce this risk — e.g. 'MFA enforced', 'Nightly encrypted backups', 'Annual security training'."
+					/>
+					<InputTextarea name="controls" rows={2} className="w-full" autoResize />
+				</div>
+
+				<div className="md:col-span-2">
+					<Button type="submit" label="Add Risk Item" icon="pi pi-plus" />
+				</div>
+			</form>
+		</Panel>
+	)
+}
+
 export default function AssessmentDetailPage({ loaderData }: Route.ComponentProps) {
 	const { user, assessment, riskItems, feedbackList, isActive, canEdit, canFeedback } = loaderData
 
@@ -132,17 +288,9 @@ export default function AssessmentDetailPage({ loaderData }: Route.ComponentProp
 						{assessment.title}
 					</h1>
 					<div className="flex gap-2 mt-1">
-						<span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
-							{assessment.framework}
-						</span>
-						<span className="text-xs px-2 py-1 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
-							{assessment.status}
-						</span>
-						{!isActive && (
-							<span className="text-xs px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
-								Read Only (Semester Inactive)
-							</span>
-						)}
+						<Tag value={assessment.framework} severity="info" />
+						<Tag value={assessment.status} severity="secondary" />
+						{!isActive && <Tag value="Read Only (Semester Inactive)" severity="danger" />}
 					</div>
 				</div>
 			</div>
@@ -153,69 +301,46 @@ export default function AssessmentDetailPage({ loaderData }: Route.ComponentProp
 					Risk Items ({riskItems.length})
 				</h2>
 
-				{riskItems.length === 0 ? (
-					<p className="text-surface-500 text-sm">No risk items yet.</p>
-				) : (
-					<div className="overflow-x-auto">
-						<table className="w-full text-sm">
-							<thead>
-								<tr className="text-left border-b border-surface-200 dark:border-surface-700">
-									<th className="pb-3 pr-4 text-surface-600 dark:text-surface-400 font-medium">Asset</th>
-									<th className="pb-3 pr-4 text-surface-600 dark:text-surface-400 font-medium">Threat</th>
-									<th className="pb-3 pr-4 text-surface-600 dark:text-surface-400 font-medium">L</th>
-									<th className="pb-3 pr-4 text-surface-600 dark:text-surface-400 font-medium">I</th>
-									<th className="pb-3 pr-4 text-surface-600 dark:text-surface-400 font-medium">Score</th>
-									<th className="pb-3 pr-4 text-surface-600 dark:text-surface-400 font-medium">Treatment</th>
-									{canEdit && <th className="pb-3" />}
-								</tr>
-							</thead>
-							<tbody>
-								{riskItems.map((item) => {
-									const level = riskLevel(item.riskScore)
-									const levelColors = {
-										low: "text-green-600 dark:text-green-400",
-										medium: "text-yellow-600 dark:text-yellow-400",
-										high: "text-orange-600 dark:text-orange-400",
-										critical: "text-red-600 dark:text-red-400",
-									}
-									return (
-										<tr key={item.id} className="border-b border-surface-100 dark:border-surface-800">
-											<td className="py-3 pr-4">{item.assetName}</td>
-											<td className="py-3 pr-4">{item.threat}</td>
-											<td className="py-3 pr-4">{item.likelihood}</td>
-											<td className="py-3 pr-4">{item.impact}</td>
-											<td className={`py-3 pr-4 font-bold ${levelColors[level]}`}>
-												{item.riskScore}
-											</td>
-											<td className="py-3 pr-4 capitalize">{item.treatment}</td>
-											{canEdit && (
-												<td className="py-3">
-													<form method="post">
-														<input type="hidden" name="intent" value="delete-risk-item" />
-														<input type="hidden" name="itemId" value={item.id} />
-														<button
-															type="submit"
-															className="text-red-500 hover:text-red-700 text-xs"
-															onClick={(e) => {
-																if (!confirm("Delete this risk item?")) e.preventDefault()
-															}}
-														>
-															<i className="pi pi-trash" />
-														</button>
-													</form>
-												</td>
-											)}
-										</tr>
-									)
-								})}
-							</tbody>
-						</table>
-					</div>
-				)}
+				<DataTable value={riskItems} stripedRows emptyMessage="No risk items yet." className="text-sm">
+					<Column field="assetName" header="Asset" />
+					<Column field="threat" header="Threat" />
+					<Column field="likelihood" header="L" />
+					<Column field="impact" header="I" />
+					<Column
+						header="Score"
+						body={(item) => {
+							const level = riskLevel(item.riskScore)
+							return <span className={`font-bold ${levelColors[level]}`}>{item.riskScore}</span>
+						}}
+					/>
+					<Column
+						header="Treatment"
+						body={(item) => <span className="capitalize">{item.treatment}</span>}
+					/>
+					{canEdit && (
+						<Column
+							header=""
+							body={(item) => (
+								<form method="post" style={{ display: "inline" }}>
+									<input type="hidden" name="intent" value="delete-risk-item" />
+									<input type="hidden" name="itemId" value={item.id} />
+									<Button
+										type="submit"
+										icon="pi pi-trash"
+										severity="danger"
+										text
+										size="small"
+										onClick={(e) => {
+											if (!confirm("Delete this risk item?")) e.preventDefault()
+										}}
+									/>
+								</form>
+							)}
+						/>
+					)}
+				</DataTable>
 
-				{canEdit && (
-					<AddRiskItemForm assessmentFramework={assessment.framework} />
-				)}
+				{canEdit && <AddRiskItemForm assessmentFramework={assessment.framework} />}
 			</section>
 
 			{/* Feedback */}
@@ -231,125 +356,31 @@ export default function AssessmentDetailPage({ loaderData }: Route.ComponentProp
 								className="p-4 bg-surface-0 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700"
 							>
 								<p className="text-sm text-surface-900 dark:text-surface-0">{f.comment}</p>
-								<p className="text-xs text-surface-500 mt-1">
-									{f.supervisor.fullName}
-								</p>
+								<p className="text-xs text-surface-500 mt-1">{f.supervisor.fullName}</p>
 							</div>
 						))}
 					</div>
 					{(hasRole(user.role, Role.Supervisor) || hasRole(user.role, Role.Admin)) && (
 						<form method="post" className="flex gap-3">
 							<input type="hidden" name="intent" value="add-feedback" />
-							<textarea
+							<InputTextarea
 								name="comment"
 								rows={3}
-								className="flex-1 border border-surface-300 dark:border-surface-600 rounded-lg px-3 py-2 bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-0 text-sm"
 								placeholder="Leave feedback..."
 								required
+								className="flex-1"
+								autoResize
 							/>
-							<button
+							<Button
 								type="submit"
-								className="self-end py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors text-sm"
-							>
-								Submit
-							</button>
+								label="Submit"
+								icon="pi pi-send"
+								className="self-end"
+							/>
 						</form>
 					)}
 				</section>
 			)}
 		</div>
-	)
-}
-
-function AddRiskItemForm({ assessmentFramework }: { assessmentFramework: string }) {
-	const showSoc2 = assessmentFramework === "SOC2" || assessmentFramework === "BOTH"
-
-	return (
-		<details className="mt-6 bg-surface-0 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 p-5">
-			<summary className="font-medium cursor-pointer text-surface-900 dark:text-surface-0">
-				+ Add Risk Item
-			</summary>
-			<form method="post" className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-				<input type="hidden" name="intent" value="add-risk-item" />
-				{[
-					{ name: "assetName", label: "Asset Name" },
-					{ name: "assetCategory", label: "Asset Category" },
-					{ name: "threat", label: "Threat" },
-					{ name: "vulnerability", label: "Vulnerability" },
-				].map((f) => (
-					<div key={f.name}>
-						<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
-							{f.label}
-						</label>
-						<input
-							name={f.name}
-							type="text"
-							required
-							className="w-full border border-surface-300 dark:border-surface-600 rounded-lg px-3 py-2 bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-0 text-sm"
-						/>
-					</div>
-				))}
-				{["Likelihood (1-5)", "Impact (1-5)"].map((label, i) => (
-					<div key={label}>
-						<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
-							{label}
-						</label>
-						<input
-							name={i === 0 ? "likelihood" : "impact"}
-							type="number"
-							min={1}
-							max={5}
-							required
-							className="w-full border border-surface-300 dark:border-surface-600 rounded-lg px-3 py-2 bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-0 text-sm"
-						/>
-					</div>
-				))}
-				<div>
-					<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
-						Treatment
-					</label>
-					<select
-						name="treatment"
-						className="w-full border border-surface-300 dark:border-surface-600 rounded-lg px-3 py-2 bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-0 text-sm"
-					>
-						<option value="mitigate">Mitigate</option>
-						<option value="accept">Accept</option>
-						<option value="transfer">Transfer</option>
-						<option value="avoid">Avoid</option>
-					</select>
-				</div>
-				{showSoc2 && (
-					<div>
-						<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
-							SOC2 Criteria (optional)
-						</label>
-						<input
-							name="soc2Criteria"
-							type="text"
-							placeholder="e.g. CC6.1"
-							className="w-full border border-surface-300 dark:border-surface-600 rounded-lg px-3 py-2 bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-0 text-sm"
-						/>
-					</div>
-				)}
-				<div className="md:col-span-2">
-					<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
-						Controls (optional)
-					</label>
-					<textarea
-						name="controls"
-						rows={2}
-						className="w-full border border-surface-300 dark:border-surface-600 rounded-lg px-3 py-2 bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-0 text-sm"
-					/>
-				</div>
-				<div className="md:col-span-2">
-					<button
-						type="submit"
-						className="py-2 px-6 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors text-sm"
-					>
-						Add Risk Item
-					</button>
-				</div>
-			</form>
-		</details>
 	)
 }

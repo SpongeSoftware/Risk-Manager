@@ -1,4 +1,9 @@
-import { data, redirect } from "react-router"
+import { useState } from "react"
+import { data, redirect, useNavigate } from "react-router"
+import { InputText } from "primereact/inputtext"
+import { Dropdown } from "primereact/dropdown"
+import { Button } from "primereact/button"
+import { Message } from "primereact/message"
 import type { Route } from "./+types/app.teams.$teamId.assessments.new"
 import { requireUser } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
@@ -42,9 +47,17 @@ export async function action({ request, params }: Route.ActionArgs) {
 	throw redirect(`/teams/${teamId}/assessments/${assessment.id}`)
 }
 
+const frameworkOptions = [
+	{ label: "ISO 27001", value: "ISO27001" },
+	{ label: "SOC 2", value: "SOC2" },
+	{ label: "Both", value: "BOTH" },
+]
+
 export default function NewAssessmentPage({ loaderData, actionData }: Route.ComponentProps) {
 	const { team } = loaderData
 	const errors = actionData?.errors
+	const navigate = useNavigate()
+	const [framework, setFramework] = useState("ISO27001")
 
 	return (
 		<div className="max-w-xl">
@@ -56,40 +69,32 @@ export default function NewAssessmentPage({ loaderData, actionData }: Route.Comp
 					<label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
 						Title
 					</label>
-					<input
-						name="title"
-						type="text"
-						className="w-full border border-surface-300 dark:border-surface-600 rounded-lg px-3 py-2 bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-0"
-						required
-					/>
-					{errors?.title && <p className="text-red-500 text-sm mt-1">{errors.title[0]}</p>}
+					<InputText name="title" required className="w-full" />
+					{errors?.title && <Message severity="error" text={errors.title[0]} className="w-full mt-1" />}
 				</div>
+
 				<div>
 					<label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
 						Framework
 					</label>
-					<select
-						name="framework"
-						className="w-full border border-surface-300 dark:border-surface-600 rounded-lg px-3 py-2 bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-0"
-					>
-						<option value="ISO27001">ISO 27001</option>
-						<option value="SOC2">SOC 2</option>
-						<option value="BOTH">Both</option>
-					</select>
+					<input type="hidden" name="framework" value={framework} />
+					<Dropdown
+						value={framework}
+						onChange={(e) => setFramework(e.value)}
+						options={frameworkOptions}
+						className="w-full"
+					/>
 				</div>
+
 				<div className="flex gap-3 pt-2">
-					<button
-						type="submit"
-						className="py-2 px-6 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
-					>
-						Create Assessment
-					</button>
-					<a
-						href={`/teams/${team.id}`}
-						className="py-2 px-6 border border-surface-300 dark:border-surface-600 rounded-lg text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-700 transition-colors"
-					>
-						Cancel
-					</a>
+					<Button type="submit" label="Create Assessment" icon="pi pi-check" />
+					<Button
+						type="button"
+						label="Cancel"
+						outlined
+						severity="secondary"
+						onClick={() => navigate(`/teams/${team.id}`)}
+					/>
 				</div>
 			</form>
 		</div>

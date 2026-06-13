@@ -30,11 +30,9 @@ export default function LoginPage({ loaderData }: Route.ComponentProps) {
 					</div>
 				)}
 
-				<a
-					href={signInUrl}
-					className="block w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
-				>
-					Sign in with WorkOS
+				<a href={signInUrl} className="block w-full p-button p-component p-button-primary justify-center">
+					<i className="p-button-icon pi pi-sign-in mr-2" />
+					<span className="p-button-label">Sign in with WorkOS</span>
 				</a>
 			</div>
 		</div>

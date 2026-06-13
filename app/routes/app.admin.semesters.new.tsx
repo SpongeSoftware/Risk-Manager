@@ -1,4 +1,11 @@
+import { useState } from "react"
 import { data, redirect } from "react-router"
+import { useNavigate } from "react-router"
+import { InputText } from "primereact/inputtext"
+import { InputNumber } from "primereact/inputnumber"
+import { Dropdown } from "primereact/dropdown"
+import { Button } from "primereact/button"
+import { Message } from "primereact/message"
 import type { Route } from "./+types/app.admin.semesters.new"
 import { requireRole } from "../server/auth"
 import { Role } from "../server/schema"
@@ -26,8 +33,17 @@ export async function action({ request }: Route.ActionArgs) {
 	throw redirect("/admin/semesters")
 }
 
+const periodOptions = [
+	{ label: "Semester 1", value: "1" },
+	{ label: "Semester 2", value: "2" },
+	{ label: "Summer", value: "summer" },
+]
+
 export default function NewSemesterPage({ actionData }: Route.ComponentProps) {
 	const errors = actionData?.errors
+	const navigate = useNavigate()
+	const [year, setYear] = useState<number>(new Date().getFullYear())
+	const [period, setPeriod] = useState("1")
 
 	return (
 		<div className="max-w-xl">
@@ -35,53 +51,66 @@ export default function NewSemesterPage({ actionData }: Route.ComponentProps) {
 				Create Semester
 			</h1>
 			<form method="post" className="space-y-4 bg-surface-0 dark:bg-surface-800 p-6 rounded-xl border border-surface-200 dark:border-surface-700">
-				{[
-					{ name: "name", label: "Semester Name", type: "text" },
-					{ name: "year", label: "Year", type: "number" },
-					{ name: "startDate", label: "Start Date", type: "date" },
-					{ name: "endDate", label: "End Date", type: "date" },
-				].map((f) => (
-					<div key={f.name}>
-						<label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-							{f.label}
-						</label>
-						<input
-							name={f.name}
-							type={f.type}
-							required
-							className="w-full border border-surface-300 dark:border-surface-600 rounded-lg px-3 py-2 bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-0"
-						/>
-						{errors?.[f.name as keyof typeof errors] && (
-							<p className="text-red-500 text-sm mt-1">{(errors[f.name as keyof typeof errors] as string[])[0]}</p>
-						)}
-					</div>
-				))}
+				<div>
+					<label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+						Semester Name
+					</label>
+					<InputText name="name" required className="w-full" />
+					{errors?.name && <Message severity="error" text={errors.name[0]} className="w-full mt-1" />}
+				</div>
+
+				<div>
+					<label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+						Year
+					</label>
+					<input type="hidden" name="year" value={year} />
+					<InputNumber
+						value={year}
+						onValueChange={(e) => setYear(e.value ?? new Date().getFullYear())}
+						useGrouping={false}
+						className="w-full"
+					/>
+					{errors?.year && <Message severity="error" text={errors.year[0]} className="w-full mt-1" />}
+				</div>
+
 				<div>
 					<label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
 						Period
 					</label>
-					<select
-						name="period"
-						className="w-full border border-surface-300 dark:border-surface-600 rounded-lg px-3 py-2 bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-0"
-					>
-						<option value="1">Semester 1</option>
-						<option value="2">Semester 2</option>
-						<option value="summer">Summer</option>
-					</select>
+					<input type="hidden" name="period" value={period} />
+					<Dropdown
+						value={period}
+						onChange={(e) => setPeriod(e.value)}
+						options={periodOptions}
+						className="w-full"
+					/>
 				</div>
+
+				<div>
+					<label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+						Start Date
+					</label>
+					<InputText name="startDate" type="date" required className="w-full" />
+					{errors?.startDate && <Message severity="error" text={errors.startDate[0]} className="w-full mt-1" />}
+				</div>
+
+				<div>
+					<label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+						End Date
+					</label>
+					<InputText name="endDate" type="date" required className="w-full" />
+					{errors?.endDate && <Message severity="error" text={errors.endDate[0]} className="w-full mt-1" />}
+				</div>
+
 				<div className="flex gap-3 pt-2">
-					<button
-						type="submit"
-						className="py-2 px-6 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
-					>
-						Create Semester
-					</button>
-					<a
-						href="/admin/semesters"
-						className="py-2 px-6 border border-surface-300 dark:border-surface-600 rounded-lg text-surface-700 dark:text-surface-300"
-					>
-						Cancel
-					</a>
+					<Button type="submit" label="Create Semester" icon="pi pi-check" />
+					<Button
+						type="button"
+						label="Cancel"
+						outlined
+						severity="secondary"
+						onClick={() => navigate("/admin/semesters")}
+					/>
 				</div>
 			</form>
 		</div>

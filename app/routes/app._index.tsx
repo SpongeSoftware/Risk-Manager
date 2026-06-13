@@ -1,4 +1,6 @@
-import { redirect } from "react-router"
+import { redirect, useNavigate } from "react-router"
+import { Tag } from "primereact/tag"
+import { Button } from "primereact/button"
 import type { Route } from "./+types/app._index"
 import { requireUser } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
@@ -27,6 +29,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function DashboardPage({ loaderData }: Route.ComponentProps) {
 	const { user, teams, view } = loaderData
+	const navigate = useNavigate()
 
 	return (
 		<div>
@@ -49,13 +52,23 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
 				) : (
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 						{teams.map((team) => (
-							<a
+							<button
 								key={team.id}
-								href={`/teams/${team.id}`}
-								className="block p-5 bg-surface-0 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 hover:border-purple-500 transition-colors"
+								type="button"
+								onClick={() => navigate(`/teams/${team.id}`)}
+								className="text-left p-5 bg-surface-0 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 hover:border-purple-500 transition-colors w-full"
 							>
-								<h3 className="font-semibold text-surface-900 dark:text-surface-0">{team.name}</h3>
-							</a>
+								<h3 className="font-semibold text-surface-900 dark:text-surface-0 mb-1">{team.name}</h3>
+								{"semester" in team && (
+									<div className="flex items-center gap-2 mt-1">
+										<span className="text-sm text-surface-500">{(team as { semester: { name: string; isActive: boolean } }).semester.name}</span>
+										{(team as { semester: { isActive: boolean } }).semester.isActive
+											? <Tag value="Active" severity="success" />
+											: <Tag value="Inactive" severity="danger" />
+										}
+									</div>
+								)}
+							</button>
 						))}
 					</div>
 				)}

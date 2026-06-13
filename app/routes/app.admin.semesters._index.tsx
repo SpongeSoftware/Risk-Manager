@@ -1,4 +1,9 @@
 import { data } from "react-router"
+import { useNavigate } from "react-router"
+import { DataTable } from "primereact/datatable"
+import { Column } from "primereact/column"
+import { Button } from "primereact/button"
+import { Tag } from "primereact/tag"
 import type { Route } from "./+types/app.admin.semesters._index"
 import { requireRole } from "../server/auth"
 import { Role } from "../server/schema"
@@ -36,6 +41,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function AdminSemestersPage({ loaderData }: Route.ComponentProps) {
 	const { semesters } = loaderData
+	const navigate = useNavigate()
 
 	return (
 		<div>
@@ -43,67 +49,58 @@ export default function AdminSemestersPage({ loaderData }: Route.ComponentProps)
 				<h1 className="text-2xl font-bold text-surface-900 dark:text-surface-0">
 					Semester Management
 				</h1>
-				<a
-					href="/admin/semesters/new"
-					className="py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition-colors"
-				>
-					<i className="pi pi-plus mr-2" />
-					New Semester
-				</a>
+				<Button
+					label="New Semester"
+					icon="pi pi-plus"
+					onClick={() => navigate("/admin/semesters/new")}
+				/>
 			</div>
 
-			<div className="bg-surface-0 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 overflow-hidden">
-				<table className="w-full text-sm">
-					<thead>
-						<tr className="bg-surface-50 dark:bg-surface-900">
-							{["Name", "Year", "Period", "Start", "End", "Active", "Actions"].map((h) => (
-								<th key={h} className="px-4 py-3 text-left font-medium text-surface-600 dark:text-surface-400">
-									{h}
-								</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{semesters.map((s) => (
-							<tr key={s.id} className="border-t border-surface-100 dark:border-surface-800">
-								<td className="px-4 py-3 font-medium">{s.name}</td>
-								<td className="px-4 py-3">{s.year}</td>
-								<td className="px-4 py-3">{s.period === "summer" ? "Summer" : `Semester ${s.period}`}</td>
-								<td className="px-4 py-3 text-surface-500">{s.startDate}</td>
-								<td className="px-4 py-3 text-surface-500">{s.endDate}</td>
-								<td className="px-4 py-3">
-									<form method="post" className="inline">
-										<input type="hidden" name="intent" value="toggle-active" />
-										<input type="hidden" name="id" value={s.id} />
-										<input type="hidden" name="isActive" value={String(!s.isActive)} />
-										<button
-											type="submit"
-											className={`text-xs px-2 py-1 rounded ${s.isActive ? "bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400" : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"}`}
-										>
-											{s.isActive ? "Active" : "Inactive"}
-										</button>
-									</form>
-								</td>
-								<td className="px-4 py-3">
-									<form method="post" className="inline">
-										<input type="hidden" name="intent" value="delete" />
-										<input type="hidden" name="id" value={s.id} />
-										<button
-											type="submit"
-											className="text-red-500 hover:text-red-700 text-xs"
-											onClick={(e) => {
-												if (!confirm(`Delete ${s.name}?`)) e.preventDefault()
-											}}
-										>
-											Delete
-										</button>
-									</form>
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
+			<DataTable value={semesters} stripedRows emptyMessage="No semesters found.">
+				<Column field="name" header="Name" />
+				<Column field="year" header="Year" />
+				<Column
+					header="Period"
+					body={(s) => (s.period === "summer" ? "Summer" : `Semester ${s.period}`)}
+				/>
+				<Column field="startDate" header="Start" />
+				<Column field="endDate" header="End" />
+				<Column
+					header="Active"
+					body={(s) => (
+						<form method="post" style={{ display: "inline" }}>
+							<input type="hidden" name="intent" value="toggle-active" />
+							<input type="hidden" name="id" value={s.id} />
+							<input type="hidden" name="isActive" value={String(!s.isActive)} />
+							<Tag
+								severity={s.isActive ? "success" : "warning"}
+								value={s.isActive ? "Active" : "Inactive"}
+								className="cursor-pointer"
+								onClick={(e) => (e.currentTarget.closest("form") as HTMLFormElement)?.requestSubmit()}
+							/>
+						</form>
+					)}
+				/>
+				<Column
+					header="Actions"
+					body={(s) => (
+						<form method="post" style={{ display: "inline" }}>
+							<input type="hidden" name="intent" value="delete" />
+							<input type="hidden" name="id" value={s.id} />
+							<Button
+								type="submit"
+								icon="pi pi-trash"
+								severity="danger"
+								text
+								size="small"
+								onClick={(e) => {
+									if (!confirm(`Delete ${s.name}?`)) e.preventDefault()
+								}}
+							/>
+						</form>
+					)}
+				/>
+			</DataTable>
 		</div>
 	)
 }

@@ -1,4 +1,5 @@
 import { signOut } from "@workos-inc/authkit-react-router"
+import { Button } from "primereact/button"
 import type { Route } from "./+types/no-active-team"
 
 export async function action({ request }: Route.ActionArgs) {
@@ -18,12 +19,7 @@ export default function NoActiveTeamPage() {
 					administrator.
 				</p>
 				<form method="post">
-					<button
-						type="submit"
-						className="py-2 px-6 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
-					>
-						Sign Out
-					</button>
+					<Button type="submit" label="Sign Out" icon="pi pi-sign-out" className="w-full" />
 				</form>
 			</div>
 		</div>

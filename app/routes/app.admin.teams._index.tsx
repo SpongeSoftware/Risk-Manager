@@ -1,3 +1,8 @@
+import { useNavigate } from "react-router"
+import { DataTable } from "primereact/datatable"
+import { Column } from "primereact/column"
+import { Button } from "primereact/button"
+import { Tag } from "primereact/tag"
 import type { Route } from "./+types/app.admin.teams._index"
 import { requireRole } from "../server/auth"
 import { Role } from "../server/schema"
@@ -11,6 +16,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function AdminTeamsPage({ loaderData }: Route.ComponentProps) {
 	const { teams } = loaderData
+	const navigate = useNavigate()
 
 	return (
 		<div>
@@ -18,57 +24,44 @@ export default function AdminTeamsPage({ loaderData }: Route.ComponentProps) {
 				<h1 className="text-2xl font-bold text-surface-900 dark:text-surface-0">
 					Team Management
 				</h1>
-				<a
-					href="/admin/teams/new"
-					className="py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition-colors"
-				>
-					<i className="pi pi-plus mr-2" />
-					New Team
-				</a>
+				<Button
+					label="New Team"
+					icon="pi pi-plus"
+					onClick={() => navigate("/admin/teams/new")}
+				/>
 			</div>
 
-			<div className="bg-surface-0 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 overflow-hidden">
-				<table className="w-full text-sm">
-					<thead>
-						<tr className="bg-surface-50 dark:bg-surface-900">
-							{["Team Name", "Semester", "Status", "Actions"].map((h) => (
-								<th key={h} className="px-4 py-3 text-left font-medium text-surface-600 dark:text-surface-400">
-									{h}
-								</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{teams.map((t) => (
-							<tr key={t.id} className="border-t border-surface-100 dark:border-surface-800">
-								<td className="px-4 py-3 font-medium">{t.name}</td>
-								<td className="px-4 py-3 text-surface-500">{t.semester.name}</td>
-								<td className="px-4 py-3">
-									{t.semester.isActive ? (
-										<span className="text-xs text-green-600 dark:text-green-400">Active</span>
-									) : (
-										<span className="text-xs text-red-500 dark:text-red-400">Inactive</span>
-									)}
-								</td>
-								<td className="px-4 py-3">
-									<a
-										href={`/teams/${t.id}`}
-										className="text-purple-600 dark:text-purple-400 hover:underline text-xs mr-3"
-									>
-										View
-									</a>
-									<a
-										href={`/teams/${t.id}/members`}
-										className="text-purple-600 dark:text-purple-400 hover:underline text-xs"
-									>
-										Members
-									</a>
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
+			<DataTable value={teams} stripedRows emptyMessage="No teams found.">
+				<Column field="name" header="Team Name" />
+				<Column header="Semester" body={(t) => t.semester.name} />
+				<Column
+					header="Status"
+					body={(t) =>
+						t.semester.isActive
+							? <Tag severity="success" value="Active" />
+							: <Tag severity="danger" value="Inactive" />
+					}
+				/>
+				<Column
+					header="Actions"
+					body={(t) => (
+						<div className="flex gap-2">
+							<Button
+								label="View"
+								size="small"
+								text
+								onClick={() => navigate(`/teams/${t.id}`)}
+							/>
+							<Button
+								label="Members"
+								size="small"
+								text
+								onClick={() => navigate(`/teams/${t.id}/members`)}
+							/>
+						</div>
+					)}
+				/>
+			</DataTable>
 		</div>
 	)
 }
