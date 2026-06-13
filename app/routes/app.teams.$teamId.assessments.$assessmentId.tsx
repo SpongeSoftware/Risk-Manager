@@ -20,8 +20,8 @@ import { Skeleton } from "primereact/skeleton"
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog"
 import type { Route } from "./+types/app.teams.$teamId.assessments.$assessmentId"
 
-export const meta: Route.MetaFunction = ({ data }) => [
-	{ title: `Risk Management — ${data?.assessment?.title ?? "Assessment"}` },
+export const meta: Route.MetaFunction = ({ loaderData }) => [
+	{ title: `Risk Management — ${loaderData.assessment.title}` },
 ]
 
 import { requireUser, requireUserLoader } from "../server/auth"
