@@ -6,6 +6,7 @@ import {
 	withAuth,
 } from "@workos-inc/authkit-react-router"
 import { redirect } from "react-router"
+import type { LoaderFunctionArgs } from "react-router"
 import { Role, hasRole } from "./schema"
 import { createUser, getUserByEmail, isFirstUser, updateUserWorkosId } from "./queries/users"
 
@@ -108,3 +109,18 @@ export async function requireActiveTeam(request: Request) {
 }
 
 export { Role, hasRole }
+
+export async function requireUserLoader<T>(
+	args: LoaderFunctionArgs,
+	callback: (user: Awaited<ReturnType<typeof requireUser>>) => Promise<T>,
+): Promise<T> {
+	return callback(await requireUser(args.request))
+}
+
+export async function requireRoleLoader<T>(
+	args: LoaderFunctionArgs,
+	flag: number,
+	callback: (user: Awaited<ReturnType<typeof requireUser>>) => Promise<T>,
+): Promise<T> {
+	return callback(await requireRole(args.request, flag))
+}
