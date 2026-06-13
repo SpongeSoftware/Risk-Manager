@@ -47,7 +47,7 @@ export async function getAllUsers() {
  */
 export async function createUser(data: NewUser) {
 	const [user] = await db.insert(users).values(data).returning()
-	return user!
+	return user
 }
 
 /**
@@ -135,5 +135,5 @@ export async function getAdminUserCount(): Promise<number> {
 		.select({ count: sql<number>`count(*)` })
 		.from(users)
 		.where(and(isNull(users.deletedAt), ne(users.id, "system"), sql`${users.role} & 4 != 0`))
-	return Number(row!.count)
+	return row.count
 }

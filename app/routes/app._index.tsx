@@ -22,7 +22,7 @@ export async function loader(args: Route.LoaderArgs) {
 
 		const teams = await getActiveTeamsForUser(user.id)
 		if (teams.length === 1) {
-			throw redirect(`/teams/${teams[0]!.id}`)
+			throw redirect(`/teams/${teams[0].id}`)
 		}
 		return { user, teams, view: "student" as const }
 	})

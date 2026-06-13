@@ -4,14 +4,14 @@ import { migrate } from "drizzle-orm/libsql/migrator"
 import { mkdirSync } from "fs"
 import { Role } from "./schema.ts"
 
-const url = process.env["TURSO_DATABASE_URL"] ?? "file:./data/db.sqlite"
+const url = process.env.TURSO_DATABASE_URL ?? "file:./data/db.sqlite"
 if (url.startsWith("file:")) {
 	mkdirSync("./data", { recursive: true })
 }
 
 const client = createClient({
 	url,
-	authToken: process.env["TURSO_AUTH_TOKEN"],
+	authToken: process.env.TURSO_AUTH_TOKEN,
 })
 const db = drizzle(client)
 

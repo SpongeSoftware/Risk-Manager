@@ -107,7 +107,7 @@ export default function TeamDetailPage({ loaderData }: Route.ComponentProps) {
 			</div>
 
 			<Suspense fallback={<AssessmentsSkeleton />}>
-				<Await resolve={assessments}>
+				<Await resolve={assessments} errorElement={<p className="text-sm" style={{ color: "var(--red-500)" }}>Could not load assessments.</p>}>
 					{(resolvedAssessments) =>
 						resolvedAssessments.length === 0 ? (
 							<p className="text-surface-500">No risk assessments yet.</p>
@@ -133,6 +133,15 @@ export default function TeamDetailPage({ loaderData }: Route.ComponentProps) {
 					}
 				</Await>
 			</Suspense>
+		</div>
+	)
+}
+
+export function ErrorBoundary() {
+	return (
+		<div className="p-8">
+			<h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
+			<p className="text-sm" style={{ color: "var(--text-color-secondary)" }}>Please try refreshing the page.</p>
 		</div>
 	)
 }

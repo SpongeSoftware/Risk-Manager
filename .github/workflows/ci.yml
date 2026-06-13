@@ -12,12 +12,11 @@ jobs:
   typecheck:
     name: typecheck
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: latest
 
       - uses: actions/setup-node@v4
         with:
@@ -44,12 +43,11 @@ jobs:
   lint:
     name: lint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: latest
 
       - uses: actions/setup-node@v4
         with:
@@ -59,18 +57,28 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate route types
+        run: pnpm exec react-router typegen
+        env:
+          APP_ENV: production
+          TURSO_DATABASE_URL: file:./data/db.sqlite
+          WORKOS_CLIENT_ID: ci-placeholder
+          WORKOS_API_KEY: ci-placeholder
+          WORKOS_REDIRECT_URI: http://localhost:3000/callback
+          WORKOS_COOKIE_PASSWORD: ci-placeholder-32-chars-padded-000
+          VITE_APP_ENV: production
+
       - name: Lint
         run: pnpm lint
 
   build:
     name: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: latest
 
       - uses: actions/setup-node@v4
         with:

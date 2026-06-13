@@ -15,5 +15,5 @@ export function useFlashToast() {
 			next.delete("toastSummary")
 			setSearchParams(next, { replace: true })
 		}
-	}, []) // intentionally only runs on mount
+	}, [searchParams, setSearchParams])
 }

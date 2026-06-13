@@ -11,10 +11,10 @@ import { Role, hasRole } from "./schema"
 import { createUser, getUserByEmail, isFirstUser, updateUserWorkosId } from "./queries/users"
 
 configure({
-	clientId: process.env["WORKOS_CLIENT_ID"] ?? "",
-	apiKey: process.env["WORKOS_API_KEY"] ?? "",
-	redirectUri: process.env["WORKOS_REDIRECT_URI"] ?? "",
-	cookiePassword: process.env["WORKOS_COOKIE_PASSWORD"] ?? "",
+	clientId: process.env.WORKOS_CLIENT_ID ?? "",
+	apiKey: process.env.WORKOS_API_KEY ?? "",
+	redirectUri: process.env.WORKOS_REDIRECT_URI ?? "",
+	cookiePassword: process.env.WORKOS_COOKIE_PASSWORD ?? "",
 })
 
 export { authkitLoader, getSignInUrl, signOut }
@@ -41,7 +41,7 @@ export async function requireUser(request: Request) {
 
 	let dbUser = await getUserByEmail(user.email)
 
-	const bootstrapEmail = process.env["BOOTSTRAP_ADMIN_EMAIL"]
+	const bootstrapEmail = process.env.BOOTSTRAP_ADMIN_EMAIL
 	if (!dbUser && bootstrapEmail && user.email === bootstrapEmail) {
 		const firstUser = await isFirstUser()
 		if (firstUser) {
@@ -112,7 +112,7 @@ export { Role, hasRole }
 
 export async function requireUserLoader<T>(
 	args: LoaderFunctionArgs,
-	callback: (user: Awaited<ReturnType<typeof requireUser>>) => Promise<T>,
+	callback: (user: Awaited<ReturnType<typeof requireUser>>) => T | Promise<T>,
 ): Promise<T> {
 	return callback(await requireUser(args.request))
 }
@@ -120,7 +120,7 @@ export async function requireUserLoader<T>(
 export async function requireRoleLoader<T>(
 	args: LoaderFunctionArgs,
 	flag: number,
-	callback: (user: Awaited<ReturnType<typeof requireUser>>) => Promise<T>,
+	callback: (user: Awaited<ReturnType<typeof requireUser>>) => T | Promise<T>,
 ): Promise<T> {
 	return callback(await requireRole(args.request, flag))
 }

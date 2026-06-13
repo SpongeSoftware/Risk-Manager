@@ -5,7 +5,7 @@ import tseslint from "typescript-eslint"
 
 export default tseslint.config(
 	{
-		ignores: ["build/**", "node_modules/**", ".react-router/**", "drizzle/**"],
+		ignores: ["build/**", "node_modules/**", ".react-router/**", "drizzle/**", ".storybook/**"],
 	},
 	...tseslint.configs.strictTypeChecked,
 	...tseslint.configs.stylisticTypeChecked,
@@ -22,7 +22,7 @@ export default tseslint.config(
 			},
 		},
 		settings: {
-			react: { version: "detect" },
+			react: { version: "19" },
 		},
 		rules: {
 			...reactPlugin.configs.recommended.rules,
@@ -34,6 +34,25 @@ export default tseslint.config(
 			semi: ["error", "never"],
 			"no-tabs": "off",
 			indent: ["error", "tab", { SwitchCase: 1 }],
+
+			// React Router uses throw data() / throw redirect() as control flow — not standard Error objects
+			"@typescript-eslint/only-throw-error": "off",
+			// Allow numbers in template literals (e.g. `/teams/${teamId}`)
+			"@typescript-eslint/restrict-template-expressions": ["error", { allowNumber: true }],
+			// Allow async functions in JSX event attributes and object callbacks (e.g. confirmDialog accept)
+			"@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { attributes: false, properties: false } }],
+			// Treat _-prefixed parameters/variables as intentionally unused
+			"@typescript-eslint/no-unused-vars": ["error", {
+				argsIgnorePattern: "^_",
+				varsIgnorePattern: "^_",
+				destructuredArrayIgnorePattern: "^_",
+				caughtErrors: "all",
+				ignoreRestSiblings: true,
+			}],
 		},
+	},
+	{
+		files: ["eslint.config.ts"],
+		rules: { "@typescript-eslint/no-deprecated": "off" },
 	},
 )

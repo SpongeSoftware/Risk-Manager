@@ -3,7 +3,7 @@ import { Button } from "primereact/button"
 import type { User } from "../../server/schema"
 import { getRoleLabel } from "../../lib/roles"
 import { setColorScheme, appStore } from "../../store"
-import { useStore } from "@tanstack/react-store"
+import { useSelector } from "@tanstack/react-store"
 import type { ColorScheme } from "../../store"
 
 interface TopBarProps {
@@ -27,7 +27,7 @@ const schemeOptions: { value: ColorScheme; icon: string; label: string }[] = [
  * @param props.user - The authenticated user record used for name and role display.
  */
 export function TopBar({ user }: TopBarProps) {
-	const colorScheme = useStore(appStore, (s) => s.colorScheme)
+	const colorScheme = useSelector(appStore, (s) => s.colorScheme)
 
 	return (
 		<header className="topbar border-b flex items-center justify-between px-6">
@@ -47,7 +47,7 @@ export function TopBar({ user }: TopBarProps) {
 							rounded
 							size="small"
 							title={opt.label}
-							onClick={() => setColorScheme(opt.value)}
+							onClick={() => { setColorScheme(opt.value) }}
 							className={`theme-btn${colorScheme === opt.value ? " active" : ""}`}
 							aria-label={opt.label}
 						/>

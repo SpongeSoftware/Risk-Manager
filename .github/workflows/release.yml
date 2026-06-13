@@ -1,6 +1,9 @@
 name: Release
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       version_bump:
@@ -16,16 +19,46 @@ jobs:
   release:
     name: Create release & deploy
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     concurrency:
       group: production
       cancel-in-progress: false
     permissions:
       contents: write
+    env:
+      FLY_APP: risk-manager
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Validate required secrets
+        run: |
+          MISSING=()
+          for var in TURSO_DATABASE_URL TURSO_AUTH_TOKEN WORKOS_CLIENT_ID WORKOS_API_KEY \
+                      WORKOS_REDIRECT_URI WORKOS_COOKIE_PASSWORD BOOTSTRAP_ADMIN_EMAIL FLY_API_TOKEN; do
+            [ -z "${!var}" ] && MISSING+=("$var")
+          done
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "Missing required secrets: ${MISSING[*]}"
+            exit 1
+          fi
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          WORKOS_CLIENT_ID: ${{ secrets.WORKOS_CLIENT_ID }}
+          WORKOS_API_KEY: ${{ secrets.WORKOS_API_KEY }}
+          WORKOS_REDIRECT_URI: ${{ secrets.WORKOS_REDIRECT_URI }}
+          WORKOS_COOKIE_PASSWORD: ${{ secrets.WORKOS_COOKIE_PASSWORD }}
+          BOOTSTRAP_ADMIN_EMAIL: ${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Resolve version bump
+        id: bump
+        run: |
+          BUMP="${{ inputs.version_bump }}"
+          echo "type=${BUMP:-patch}" >> "$GITHUB_OUTPUT"
 
       - name: Compute next version
         id: version
@@ -37,7 +70,7 @@ jobs:
           MINOR=$(echo "$VERSION" | cut -d. -f2)
           PATCH=$(echo "$VERSION" | cut -d. -f3)
 
-          case "${{ inputs.version_bump }}" in
+          case "${{ steps.bump.outputs.type }}" in
             major)
               MAJOR=$((MAJOR + 1))
               MINOR=0
@@ -77,10 +110,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          DIRECT_COMMITS=$(git log \
-            "${{ steps.version.outputs.previous_version }}..${{ steps.version.outputs.new_version }}" \
-            --no-merges \
-            --pretty=format:"- %s (%h)" 2>/dev/null || true)
+          RANGE="${{ steps.version.outputs.previous_version }}..${{ steps.version.outputs.new_version }}"
+          DIRECT_COMMITS=$(git log "$RANGE" --no-merges --pretty=format:"- %s (%h)")
 
           if [ -n "$DIRECT_COMMITS" ]; then
             CURRENT_NOTES=$(gh release view "${{ steps.version.outputs.new_version }}" --json body -q .body)
@@ -90,23 +121,43 @@ jobs:
 ${DIRECT_COMMITS}"
           fi
 
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - uses: superfly/flyctl-actions/setup-flyctl@1.5
 
       - name: Sync secrets to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          WORKOS_CLIENT_ID: ${{ secrets.WORKOS_CLIENT_ID }}
+          WORKOS_API_KEY: ${{ secrets.WORKOS_API_KEY }}
+          WORKOS_REDIRECT_URI: ${{ secrets.WORKOS_REDIRECT_URI }}
+          WORKOS_COOKIE_PASSWORD: ${{ secrets.WORKOS_COOKIE_PASSWORD }}
+          BOOTSTRAP_ADMIN_EMAIL: ${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: |
-          flyctl secrets set \
-            APP_ENV=production \
-            VITE_APP_ENV=production \
-            TURSO_DATABASE_URL="${{ secrets.TURSO_DATABASE_URL }}" \
-            TURSO_AUTH_TOKEN="${{ secrets.TURSO_AUTH_TOKEN }}" \
-            WORKOS_CLIENT_ID="${{ secrets.WORKOS_CLIENT_ID }}" \
-            WORKOS_API_KEY="${{ secrets.WORKOS_API_KEY }}" \
-            WORKOS_REDIRECT_URI="${{ secrets.WORKOS_REDIRECT_URI }}" \
-            WORKOS_COOKIE_PASSWORD="${{ secrets.WORKOS_COOKIE_PASSWORD }}" \
-            BOOTSTRAP_ADMIN_EMAIL="${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}" \
-            SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
-            SENTRY_ORG="${{ secrets.SENTRY_ORG }}" \
-            SENTRY_PROJECT="${{ secrets.SENTRY_PROJECT }}"
+          printf '%s\n' \
+            "APP_ENV=production" \
+            "VITE_APP_ENV=production" \
+            "TURSO_DATABASE_URL=$TURSO_DATABASE_URL" \
+            "TURSO_AUTH_TOKEN=$TURSO_AUTH_TOKEN" \
+            "WORKOS_CLIENT_ID=$WORKOS_CLIENT_ID" \
+            "WORKOS_API_KEY=$WORKOS_API_KEY" \
+            "WORKOS_REDIRECT_URI=$WORKOS_REDIRECT_URI" \
+            "WORKOS_COOKIE_PASSWORD=$WORKOS_COOKIE_PASSWORD" \
+            "BOOTSTRAP_ADMIN_EMAIL=$BOOTSTRAP_ADMIN_EMAIL" \
+            "SENTRY_DSN=$SENTRY_DSN" \
+            "SENTRY_ORG=$SENTRY_ORG" \
+            "SENTRY_PROJECT=$SENTRY_PROJECT" \
+          | flyctl secrets import
+
+      - name: Capture current release for rollback
+        id: rollback
+        run: |
+          IMAGE=$(flyctl releases list --app "$FLY_APP" --json 2>/dev/null \
+            | jq -r '.[0].ImageRef // ""')
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
@@ -115,22 +166,29 @@ ${DIRECT_COMMITS}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
+      - name: Rollback deployment on failure
+        if: failure() && steps.rollback.outputs.image != ''
+        run: flyctl deploy --image "${{ steps.rollback.outputs.image }}" --app "$FLY_APP"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
       - name: Ensure custom domain certificate (idempotent)
         if: vars.FLY_CUSTOM_DOMAIN != ''
-        run: flyctl certs add "${{ vars.FLY_CUSTOM_DOMAIN }}" || true
+        continue-on-error: true
+        run: flyctl certs add "${{ vars.FLY_CUSTOM_DOMAIN }}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Run database migrations
         run: |
           flyctl ssh console \
-            --app risk-manager \
+            --app "$FLY_APP" \
             --command "node --experimental-strip-types app/server/migrate.ts"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Generate SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@v0.24.0
         with:
           artifact-name: sbom-${{ steps.version.outputs.new_version }}.spdx.json
           output-file: sbom.spdx.json

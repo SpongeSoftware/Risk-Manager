@@ -39,7 +39,7 @@ export async function getRiskItemById(id: number) {
 export async function createRiskItem(data: Omit<NewRiskItem, "riskScore"> & { likelihood: number; impact: number }) {
 	const riskScore = data.likelihood * data.impact
 	const [item] = await db.insert(riskItems).values({ ...data, riskScore }).returning()
-	return item!
+	return item
 }
 
 /**

@@ -9,6 +9,7 @@ import type { Route } from "./+types/app.admin.teams.new"
 import { requireRole, requireRoleLoader } from "../server/auth"
 import { Role } from "../server/schema"
 import { getActiveSemesters, createTeam } from "../server/queries"
+import { z } from "zod/v4"
 import { createTeamSchema } from "../lib/schemas/team"
 import { appendAudit } from "../server/queries/audits"
 
@@ -23,7 +24,7 @@ export async function action({ request }: Route.ActionArgs) {
 	const actor = await requireRole(request, Role.Admin)
 	const formData = await request.formData()
 	const parsed = createTeamSchema.safeParse(Object.fromEntries(formData))
-	if (!parsed.success) return data({ errors: parsed.error.flatten().fieldErrors }, { status: 400 })
+	if (!parsed.success) return data({ errors: z.flattenError(parsed.error).fieldErrors }, { status: 400 })
 
 	const team = await createTeam({
 		name: parsed.data.name,
@@ -69,7 +70,7 @@ export default function NewTeamPage({ loaderData, actionData }: Route.ComponentP
 					<input type="hidden" name="semesterId" value={semesterId} />
 					<Dropdown
 						value={semesterId}
-						onChange={(e) => setSemesterId(e.value)}
+						onChange={(e) => { setSemesterId(e.value as string) }}
 						options={semesterOptions}
 						className="w-full"
 						emptyMessage="No active semesters"

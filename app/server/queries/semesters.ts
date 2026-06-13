@@ -49,7 +49,7 @@ export async function getSemesterById(id: number) {
  */
 export async function createSemester(data: NewSemester) {
 	const [semester] = await db.insert(semesters).values(data).returning()
-	return semester!
+	return semester
 }
 
 /**

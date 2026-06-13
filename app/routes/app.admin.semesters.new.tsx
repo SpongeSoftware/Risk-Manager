@@ -12,18 +12,19 @@ import type { Route } from "./+types/app.admin.semesters.new"
 import { requireRole, requireRoleLoader } from "../server/auth"
 import { Role } from "../server/schema"
 import { createSemester } from "../server/queries"
+import { z } from "zod/v4"
 import { createSemesterSchema } from "../lib/schemas/semester"
 import { appendAudit } from "../server/queries/audits"
 
 export async function loader(args: Route.LoaderArgs) {
-	return requireRoleLoader(args, Role.Admin, async () => ({}))
+	return requireRoleLoader(args, Role.Admin, () => ({}))
 }
 
 export async function action({ request }: Route.ActionArgs) {
 	const actor = await requireRole(request, Role.Admin)
 	const formData = await request.formData()
 	const parsed = createSemesterSchema.safeParse(Object.fromEntries(formData))
-	if (!parsed.success) return data({ errors: parsed.error.flatten().fieldErrors }, { status: 400 })
+	if (!parsed.success) return data({ errors: z.flattenError(parsed.error).fieldErrors }, { status: 400 })
 
 	const semester = await createSemester({
 		...parsed.data,
@@ -75,7 +76,7 @@ export default function NewSemesterPage({ actionData }: Route.ComponentProps) {
 						<input type="hidden" name="year" value={year} />
 						<InputNumber
 							value={year}
-							onValueChange={(e) => setYear(e.value ?? new Date().getFullYear())}
+							onValueChange={(e) => { setYear((e.value as number | null) ?? new Date().getFullYear()) }}
 							useGrouping={false}
 							className="w-full"
 						/>
@@ -89,7 +90,7 @@ export default function NewSemesterPage({ actionData }: Route.ComponentProps) {
 						<input type="hidden" name="period" value={period} />
 						<Dropdown
 							value={period}
-							onChange={(e) => setPeriod(e.value)}
+							onChange={(e) => { setPeriod(e.value as string) }}
 							options={periodOptions}
 							className="w-full"
 						/>
@@ -102,7 +103,7 @@ export default function NewSemesterPage({ actionData }: Route.ComponentProps) {
 						<input type="hidden" name="startDate" value={toIsoDate(startDate)} />
 						<Calendar
 							value={startDate}
-							onChange={(e) => setStartDate(e.value ?? null)}
+							onChange={(e) => { setStartDate(e.value ?? null) }}
 							dateFormat="dd/mm/yy"
 							showIcon
 							className="w-full"
@@ -117,7 +118,7 @@ export default function NewSemesterPage({ actionData }: Route.ComponentProps) {
 						<input type="hidden" name="endDate" value={toIsoDate(endDate)} />
 						<Calendar
 							value={endDate}
-							onChange={(e) => setEndDate(e.value ?? null)}
+							onChange={(e) => { setEndDate(e.value ?? null) }}
 							dateFormat="dd/mm/yy"
 							showIcon
 							className="w-full"
