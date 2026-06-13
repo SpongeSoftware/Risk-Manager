@@ -1,30 +1,40 @@
 import { useState } from "react"
-import { data } from "react-router"
+import { data, Form } from "react-router"
 import { Link } from "react-router"
+import { useActionToast } from "../hooks/useActionToast"
+import { useFlashToast } from "../hooks/useFlashToast"
 import { DataTable } from "primereact/datatable"
 import { Column } from "primereact/column"
 import { Dropdown } from "primereact/dropdown"
 import { Button } from "primereact/button"
+import { Card } from "primereact/card"
+import { Message } from "primereact/message"
+import { InputText } from "primereact/inputtext"
+import { IconField } from "primereact/iconfield"
+import { InputIcon } from "primereact/inputicon"
+import { FilterMatchMode } from "primereact/api"
 import type { Route } from "./+types/app.teams.$teamId.members"
-import { requireUser } from "../server/auth"
+import { requireUser, requireUserLoader } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
 import { getTeamById, getTeamMembers, addTeamMember, removeTeamMember } from "../server/queries"
 import { getAllUsers } from "../server/queries/users"
+import { appendAudit } from "../server/queries/audits"
 import { addTeamMemberSchema } from "../lib/schemas/team"
 
-export async function loader({ request, params }: Route.LoaderArgs) {
-	const user = await requireUser(request)
-	const teamId = Number(params.teamId)
-	const team = await getTeamById(teamId)
-	if (!team) throw data("Not found", { status: 404 })
+export async function loader(args: Route.LoaderArgs) {
+	return requireUserLoader(args, async (user) => {
+		const teamId = Number(args.params.teamId)
+		const team = await getTeamById(teamId)
+		if (!team) throw data("Not found", { status: 404 })
 
-	const [members, allUsers] = await Promise.all([
-		getTeamMembers(teamId),
-		hasRole(user.role, Role.Admin) ? getAllUsers() : Promise.resolve([]),
-	])
+		const [members, allUsers] = await Promise.all([
+			getTeamMembers(teamId),
+			hasRole(user.role, Role.Admin) ? getAllUsers() : Promise.resolve([]),
+		])
 
-	const canManage = hasRole(user.role, Role.Admin) || hasRole(user.role, Role.Supervisor)
-	return { team, members, allUsers, user, canManage }
+		const canManage = hasRole(user.role, Role.Admin) || hasRole(user.role, Role.Supervisor)
+		return { team, members, allUsers, user, canManage }
+	})
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -41,11 +51,23 @@ export async function action({ request, params }: Route.ActionArgs) {
 		const parsed = addTeamMemberSchema.safeParse(Object.fromEntries(formData))
 		if (!parsed.success) return data({ errors: parsed.error.flatten().fieldErrors }, { status: 400 })
 		await addTeamMember(teamId, parsed.data.userId, parsed.data.memberRole, user.id)
+		await appendAudit("team", teamId, "updated", user.id, {
+			fieldChanged: "members",
+			newValue: JSON.stringify({ userId: parsed.data.userId, memberRole: parsed.data.memberRole, action: "added" }),
+		})
+		return data({ ok: true, toast: { severity: "success" as const, summary: "Member added" } })
 	}
 
 	if (intent === "remove-member") {
 		const userId = formData.get("userId") as string
+		const members = await getTeamMembers(teamId)
+		const member = members.find((m) => m.userId === userId)
 		await removeTeamMember(teamId, userId, user.id)
+		await appendAudit("team", teamId, "updated", user.id, {
+			fieldChanged: "members",
+			oldValue: member ? JSON.stringify({ userId: member.userId, memberRole: member.memberRole }) : JSON.stringify({ userId }),
+		})
+		return data({ ok: true, toast: { severity: "success" as const, summary: "Member removed" } })
 	}
 
 	return data({ ok: true })
@@ -56,7 +78,13 @@ const memberRoleOptions = [
 	{ label: "Supervisor", value: "supervisor" },
 ]
 
-function AddMemberForm({ allUsers }: { allUsers: { id: string; fullName: string; email: string | null }[] }) {
+function AddMemberForm({
+	allUsers,
+	errors,
+}: {
+	allUsers: { id: string; fullName: string; email: string | null }[]
+	errors?: Record<string, string[] | undefined>
+}) {
 	const userOptions = allUsers.map((u) => ({
 		label: `${u.fullName} (${u.email})`,
 		value: u.id,
@@ -65,15 +93,15 @@ function AddMemberForm({ allUsers }: { allUsers: { id: string; fullName: string;
 	const [memberRole, setMemberRole] = useState("student")
 
 	return (
-		<div className="bg-surface-0 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 p-5">
-			<h2 className="font-semibold text-surface-900 dark:text-surface-0 mb-3">Add Member</h2>
-			<form method="post" className="flex gap-3 flex-wrap items-end">
+		<Card>
+			<h2 className="font-semibold mb-3">Add Member</h2>
+			<Form method="post" className="flex gap-3 flex-wrap items-end">
 				<input type="hidden" name="intent" value="add-member" />
 				<input type="hidden" name="userId" value={userId} />
 				<input type="hidden" name="memberRole" value={memberRole} />
 
 				<div>
-					<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
+					<label className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
 						User
 					</label>
 					<Dropdown
@@ -84,10 +112,11 @@ function AddMemberForm({ allUsers }: { allUsers: { id: string; fullName: string;
 						className="min-w-64"
 						emptyMessage="No users available"
 					/>
+					{errors?.userId && <Message severity="error" text={errors.userId[0]} className="w-full mt-1" />}
 				</div>
 
 				<div>
-					<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
+					<label className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
 						Role
 					</label>
 					<Dropdown
@@ -95,39 +124,90 @@ function AddMemberForm({ allUsers }: { allUsers: { id: string; fullName: string;
 						onChange={(e) => setMemberRole(e.value)}
 						options={memberRoleOptions}
 					/>
+					{errors?.memberRole && <Message severity="error" text={errors.memberRole[0]} className="w-full mt-1" />}
 				</div>
 
 				<Button type="submit" label="Add" icon="pi pi-user-plus" />
-			</form>
-		</div>
+			</Form>
+		</Card>
 	)
 }
 
-export default function TeamMembersPage({ loaderData }: Route.ComponentProps) {
+export default function TeamMembersPage({ loaderData, actionData }: Route.ComponentProps) {
 	const { team, members, allUsers, canManage } = loaderData
+	const addMemberErrors = actionData && "errors" in actionData
+		? (actionData.errors as Record<string, string[] | undefined>)
+		: undefined
+	useActionToast(actionData as Parameters<typeof useActionToast>[0])
+	useFlashToast()
+
+	const [globalFilterValue, setGlobalFilterValue] = useState("")
+	const [filters, setFilters] = useState({
+		global: { value: null as string | null, matchMode: FilterMatchMode.CONTAINS },
+	})
+
+	function onGlobalFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
+		const value = e.target.value
+		setFilters({ global: { value: value || null, matchMode: FilterMatchMode.CONTAINS } })
+		setGlobalFilterValue(value)
+	}
+
+	const tableHeader = (
+		<div className="flex justify-end">
+			<IconField iconPosition="left">
+				<InputIcon className="pi pi-search" />
+				<InputText value={globalFilterValue} onChange={onGlobalFilterChange} placeholder="Search members..." />
+			</IconField>
+		</div>
+	)
+
+	const flatMembers = members.map((m) => ({
+		...m,
+		fullName: m.user.fullName,
+		email: m.user.email,
+	}))
 
 	return (
 		<div>
 			<Link
 				to={`/teams/${team.id}`}
-				className="text-sm text-purple-600 dark:text-purple-400 hover:underline mb-3 block"
+				viewTransition
+				className="text-sm hover:underline mb-3 block"
+				style={{ color: "var(--primary-color)" }}
 			>
 				← Back to team
 			</Link>
-			<h1 className="text-2xl font-bold text-surface-900 dark:text-surface-0 mb-6">
+			<h1 className="text-2xl font-bold mb-6">
 				{team.name} — Members
 			</h1>
 
 			<div className="mb-6">
-				<DataTable value={members} stripedRows emptyMessage="No members yet.">
-					<Column header="Name" body={(m) => m.user.fullName} />
-					<Column header="Email" body={(m) => m.user.email} />
-					<Column header="Role" body={(m) => <span className="capitalize">{m.memberRole}</span>} />
+				<DataTable
+					value={flatMembers}
+					stripedRows
+					emptyMessage="No members yet."
+					paginator
+					rows={10}
+					rowsPerPageOptions={[5, 10, 25]}
+					filters={filters}
+					globalFilterFields={["fullName", "email", "memberRole"]}
+					header={tableHeader}
+					sortMode="single"
+					removableSort
+				>
+					<Column field="fullName" header="Name" sortable />
+					<Column field="email" header="Email" sortable />
+					<Column
+						field="memberRole"
+						header="Role"
+						sortable
+						body={(m) => <span className="capitalize">{m.memberRole}</span>}
+					/>
 					{canManage && (
 						<Column
 							header=""
 							body={(m) => (
-								<form method="post" style={{ display: "inline" }}>
+								<Form method="post" style={{ display: "inline" }}>
 									<input type="hidden" name="intent" value="remove-member" />
 									<input type="hidden" name="userId" value={m.userId} />
 									<Button
@@ -137,14 +217,14 @@ export default function TeamMembersPage({ loaderData }: Route.ComponentProps) {
 										text
 										size="small"
 									/>
-								</form>
+								</Form>
 							)}
 						/>
 					)}
 				</DataTable>
 			</div>
 
-			{canManage && allUsers.length > 0 && <AddMemberForm allUsers={allUsers} />}
+			{canManage && allUsers.length > 0 && <AddMemberForm allUsers={allUsers} errors={addMemberErrors} />}
 		</div>
 	)
 }
