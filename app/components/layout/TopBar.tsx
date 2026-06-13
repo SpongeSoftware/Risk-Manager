@@ -5,6 +5,7 @@ import { getRoleLabel } from "../../lib/roles"
 import { setColorScheme, appStore } from "../../store"
 import { useSelector } from "@tanstack/react-store"
 import type { ColorScheme } from "../../store"
+import { Logo } from "../ui/Logo"
 
 interface TopBarProps {
 	user: User
@@ -31,7 +32,7 @@ export function TopBar({ user }: TopBarProps) {
 
 	return (
 		<header className="topbar border-b flex items-center justify-between px-6">
-			<img src="/logo.svg" alt="Risk Manager" className="h-7" />
+			<Logo className="h-7" />
 
 			<div className="flex items-center gap-4">
 				{/* Theme toggle */}
