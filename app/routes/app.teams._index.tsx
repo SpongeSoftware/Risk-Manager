@@ -1,5 +1,7 @@
 import { redirect } from "react-router"
 import type { Route } from "./+types/app.teams._index"
+
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Teams" }]
 import { requireUserLoader } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
 import { getAllTeams, getActiveTeamsForUser, getTeamsForSupervisor } from "../server/queries"

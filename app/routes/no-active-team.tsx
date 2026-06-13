@@ -2,6 +2,8 @@ import { signOut } from "@workos-inc/authkit-react-router"
 import { Button } from "primereact/button"
 import type { Route } from "./+types/no-active-team"
 
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — No Active Team" }]
+
 export async function action({ request }: Route.ActionArgs) {
 	return signOut(request)
 }

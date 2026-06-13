@@ -2,6 +2,8 @@ import { data } from "react-router"
 import { Button } from "primereact/button"
 import { Tag } from "primereact/tag"
 import type { Route } from "./+types/app.teams.$teamId.report"
+
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Team Report" }]
 import { requireUserLoader } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
 import { getTeamById, getAssessmentsForTeam, getRiskItemsForAssessment } from "../server/queries"

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/logo.svg" alt="Risk Manager" height="60" />
+</p>
+
 # Risk Manager
 
 [![MIT License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)

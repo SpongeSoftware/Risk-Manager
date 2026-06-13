@@ -3,6 +3,7 @@ import { Button } from "primereact/button"
 import type { User } from "../../server/schema"
 import { hasRole, Role } from "../../lib/roles"
 import { toggleSidebar } from "../../store"
+import { Logo, LogoIcon } from "../ui/Logo"
 
 interface SidebarProps {
 	user: User
@@ -62,8 +63,10 @@ export function Sidebar({ user, collapsed }: SidebarProps) {
 	return (
 		<aside className={`sidebar flex flex-col ${collapsed ? "collapsed" : ""}`}>
 			<div className="sidebar-header flex items-center justify-between px-4 py-4 border-b">
-				{!collapsed && (
-					<span className="sidebar-title font-bold text-lg">Risk Manager</span>
+				{collapsed ? (
+					<LogoIcon className="h-7 w-7" />
+				) : (
+					<Logo className="h-8" />
 				)}
 				<Button
 					icon={`pi ${collapsed ? "pi-bars" : "pi-times"}`}

@@ -1,19 +1,22 @@
 import { useState } from "react"
 import { data } from "react-router"
 import { Link } from "react-router"
+import type { Route } from "./+types/app.teams.$teamId.audits"
+
 import { DataTable } from "primereact/datatable"
 import { Column } from "primereact/column"
 import { InputText } from "primereact/inputtext"
 import { IconField } from "primereact/iconfield"
 import { InputIcon } from "primereact/inputicon"
 import { FilterMatchMode } from "primereact/api"
-import type { Route } from "./+types/app.teams.$teamId.audits"
 import { requireUserLoader } from "../server/auth"
 import type { Audit } from "../server/schema"
 import { Role, hasRole } from "../server/schema"
 import { getTeamById } from "../server/queries"
 import { getAuditsForTeam } from "../server/queries/audits"
 import { formatDateTime } from "../lib/formatters"
+
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Team Audit Log" }]
 
 export async function loader(args: Route.LoaderArgs) {
 	return requireUserLoader(args, async (user) => {

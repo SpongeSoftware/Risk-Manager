@@ -1,5 +1,7 @@
 import { Link } from "react-router"
 import type { Route } from "./+types/app.admin._index"
+
+export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Admin" }]
 import { requireRoleLoader } from "../server/auth"
 import { Role } from "../server/schema"
 
