@@ -58,8 +58,8 @@ A full-stack web application for conducting and managing risk assessments aligne
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org) ≥ 20
-- [pnpm](https://pnpm.io) ≥ 9 — install with `npm install -g pnpm`
+- [Node.js](https://nodejs.org) ≥ 22
+- [pnpm](https://pnpm.io) 10.15.1 — install with `npm install -g pnpm` (version is pinned via the `packageManager` field; corepack will enforce it automatically)
 - A [WorkOS](https://workos.com) account with an AuthKit application configured
 - A [Turso](https://turso.tech) database **or** use local SQLite (no account needed for local dev)
 
@@ -73,11 +73,7 @@ pnpm install
 
 ### 2. Set up environment variables
 
-```bash
-cp .env.development .env
-```
-
-Open `.env` and fill in your credentials. The minimum required for local development:
+Create `.env`, open and fill in your credentials. The minimum required for local development:
 
 ```env
 APP_ENV=development
@@ -238,6 +234,11 @@ fly deploy
 ```
 
 Fly builds the Docker image, pushes it, and starts a VM. This takes 2–4 minutes on first deploy.
+
+> **Note:** Fly creates 2 machines on first deploy for high availability. For a single-instance teaching app, scale back to 1 after the first deploy:
+> ```bash
+> fly scale count 1 --yes
+> ```
 
 ### Step 6: Run database migrations
 

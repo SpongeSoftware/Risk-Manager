@@ -1,5 +1,4 @@
 .DS_Store
-.env
 /node_modules/
 
 # React Router
@@ -8,7 +7,6 @@
 
 # Environment files with secrets
 .env
-.env.production
 
 # Local database
 data/
