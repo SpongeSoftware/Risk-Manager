@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react"
-import { useStore } from "@tanstack/react-store"
+import { useSelector } from "@tanstack/react-store"
 import { Toast } from "primereact/toast"
 import type { User } from "../../server/schema"
 import { appStore, dismissToast } from "../../store"
@@ -22,8 +22,8 @@ interface AppShellProps {
  * @param props.children - The active route's page content rendered in the main area.
  */
 export function AppShell({ user, children }: AppShellProps) {
-	const collapsed = useStore(appStore, (s) => s.sidebarCollapsed)
-	const toasts = useStore(appStore, (s) => s.toasts)
+	const collapsed = useSelector(appStore, (s) => s.sidebarCollapsed)
+	const toasts = useSelector(appStore, (s) => s.toasts)
 	const toastRef = useRef<Toast>(null)
 	const shownIds = useRef(new Set<string>())
 	useColorScheme()
@@ -44,7 +44,7 @@ export function AppShell({ user, children }: AppShellProps) {
 
 	return (
 		<div className="app-shell">
-			<Toast ref={toastRef} onRemove={(msg) => { if (msg.id) dismissToast(msg.id as string) }} />
+			<Toast ref={toastRef} onRemove={(msg) => { if (msg.id) dismissToast(msg.id) }} />
 			<Sidebar user={user} collapsed={collapsed} />
 			<div className="main-content">
 				<TopBar user={user} />

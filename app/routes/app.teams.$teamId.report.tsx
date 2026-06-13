@@ -61,7 +61,7 @@ export default function ReportPage({ loaderData }: Route.ComponentProps) {
 				<Button
 					label="Print / Export PDF"
 					icon="pi pi-print"
-					onClick={() => window.print()}
+					onClick={() => { window.print() }}
 					className="print:hidden"
 				/>
 			</div>
@@ -123,12 +123,12 @@ export default function ReportPage({ loaderData }: Route.ComponentProps) {
 								})}
 							</tbody>
 						</table>
-				)}
-				{assessment.riskItems.length > 0 && (
-					<div className="mt-6 print:mt-4">
-						<RiskMatrix items={assessment.riskItems} />
-					</div>
-				)}
+					)}
+					{assessment.riskItems.length > 0 && (
+						<div className="mt-6 print:mt-4">
+							<RiskMatrix items={assessment.riskItems} />
+						</div>
+					)}
 				</section>
 			))}
 		</div>

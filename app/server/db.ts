@@ -9,8 +9,8 @@ import * as schema from "./schema"
  */
 export const db = drizzle(
 	createClient({
-		url: process.env["TURSO_DATABASE_URL"] ?? "file:./data/db.sqlite",
-		authToken: process.env["TURSO_AUTH_TOKEN"],
+		url: process.env.TURSO_DATABASE_URL ?? "file:./data/db.sqlite",
+		authToken: process.env.TURSO_AUTH_TOKEN,
 	}),
 	{ schema },
 )

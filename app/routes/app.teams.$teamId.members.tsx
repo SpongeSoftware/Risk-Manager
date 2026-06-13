@@ -19,6 +19,7 @@ import { Role, hasRole } from "../server/schema"
 import { getTeamById, getTeamMembers, addTeamMember, removeTeamMember } from "../server/queries"
 import { getAllUsers } from "../server/queries/users"
 import { appendAudit } from "../server/queries/audits"
+import { z } from "zod/v4"
 import { addTeamMemberSchema } from "../lib/schemas/team"
 
 export async function loader(args: Route.LoaderArgs) {
@@ -49,7 +50,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 	if (intent === "add-member") {
 		const parsed = addTeamMemberSchema.safeParse(Object.fromEntries(formData))
-		if (!parsed.success) return data({ errors: parsed.error.flatten().fieldErrors }, { status: 400 })
+		if (!parsed.success) return data({ errors: z.flattenError(parsed.error).fieldErrors }, { status: 400 })
 		await addTeamMember(teamId, parsed.data.userId, parsed.data.memberRole, user.id)
 		await appendAudit("team", teamId, "updated", user.id, {
 			fieldChanged: "members",
@@ -86,7 +87,7 @@ function AddMemberForm({
 	errors?: Record<string, string[] | undefined>
 }) {
 	const userOptions = allUsers.map((u) => ({
-		label: `${u.fullName} (${u.email})`,
+		label: `${u.fullName} (${u.email ?? ""})`,
 		value: u.id,
 	}))
 	const [userId, setUserId] = useState(userOptions[0]?.value ?? "")
@@ -106,7 +107,7 @@ function AddMemberForm({
 					</label>
 					<Dropdown
 						value={userId}
-						onChange={(e) => setUserId(e.value)}
+						onChange={(e) => { setUserId(e.value as string) }}
 						options={userOptions}
 						filter
 						className="min-w-64"
@@ -121,7 +122,7 @@ function AddMemberForm({
 					</label>
 					<Dropdown
 						value={memberRole}
-						onChange={(e) => setMemberRole(e.value)}
+						onChange={(e) => { setMemberRole(e.value as string) }}
 						options={memberRoleOptions}
 					/>
 					{errors?.memberRole && <Message severity="error" text={errors.memberRole[0]} className="w-full mt-1" />}
@@ -201,12 +202,12 @@ export default function TeamMembersPage({ loaderData, actionData }: Route.Compon
 						field="memberRole"
 						header="Role"
 						sortable
-						body={(m) => <span className="capitalize">{m.memberRole}</span>}
+						body={(m: (typeof flatMembers)[number]) => <span className="capitalize">{m.memberRole}</span>}
 					/>
 					{canManage && (
 						<Column
 							header=""
-							body={(m) => (
+							body={(m: (typeof flatMembers)[number]) => (
 								<Form method="post" style={{ display: "inline" }}>
 									<input type="hidden" name="intent" value="remove-member" />
 									<input type="hidden" name="userId" value={m.userId} />

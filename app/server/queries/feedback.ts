@@ -25,5 +25,5 @@ export async function getFeedbackForAssessment(assessmentId: number) {
  */
 export async function createFeedback(data: NewFeedback) {
 	const [item] = await db.insert(feedback).values(data).returning()
-	return item!
+	return item
 }

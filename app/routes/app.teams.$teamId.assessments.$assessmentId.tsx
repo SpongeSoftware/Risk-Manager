@@ -34,6 +34,7 @@ import {
 } from "../server/queries"
 import { isUserInTeam } from "../server/queries/teams"
 import { appendAudit } from "../server/queries/audits"
+import { z } from "zod/v4"
 import { riskItemSchema } from "../lib/schemas/riskItem"
 import { addFeedbackSchema, updateAssessmentStatusSchema } from "../lib/schemas/assessment"
 import { riskLevel } from "../lib/formatters"
@@ -88,7 +89,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 		if (!assessment.team.semester.isActive) throw data("Semester inactive", { status: 403 })
 		if (!isSupervisorOrAdmin && !isDraft) throw data("Assessment is no longer in draft", { status: 403 })
 		const parsed = riskItemSchema.safeParse(Object.fromEntries(formData))
-		if (!parsed.success) return data({ errors: parsed.error.flatten().fieldErrors }, { status: 400 })
+		if (!parsed.success) return data({ errors: z.flattenError(parsed.error).fieldErrors }, { status: 400 })
 
 		const item = await createRiskItem({
 			assessmentId,
@@ -107,7 +108,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 		if (!isSupervisorOrAdmin && !isDraft) throw data("Assessment is no longer in draft", { status: 403 })
 		const itemId = Number(formData.get("itemId"))
 		const parsed = riskItemSchema.safeParse(Object.fromEntries(formData))
-		if (!parsed.success) return data({ errors: parsed.error.flatten().fieldErrors }, { status: 400 })
+		if (!parsed.success) return data({ errors: z.flattenError(parsed.error).fieldErrors }, { status: 400 })
 		await updateRiskItem(itemId, parsed.data, user.id)
 		await appendAudit("risk_item", itemId, "updated", user.id)
 		return data({ ok: true, toast: { severity: "success" as const, summary: "Risk item updated" } })
@@ -118,7 +119,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			throw data("Forbidden", { status: 403 })
 		}
 		const parsed = addFeedbackSchema.safeParse(Object.fromEntries(formData))
-		if (!parsed.success) return data({ errors: parsed.error.flatten().fieldErrors }, { status: 400 })
+		if (!parsed.success) return data({ errors: z.flattenError(parsed.error).fieldErrors }, { status: 400 })
 
 		await createFeedback({
 			assessmentId,
@@ -150,7 +151,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			throw data("Forbidden", { status: 403 })
 		}
 		const parsed = updateAssessmentStatusSchema.safeParse(Object.fromEntries(formData))
-		if (!parsed.success) return data({ errors: parsed.error.flatten().fieldErrors }, { status: 400 })
+		if (!parsed.success) return data({ errors: z.flattenError(parsed.error).fieldErrors }, { status: 400 })
 
 		await updateAssessmentStatus(assessmentId, parsed.data.status, user.id)
 		await appendAudit("assessment", assessmentId, "updated", user.id, {
@@ -265,7 +266,7 @@ function RiskItemFields({
 				<input type="hidden" name="likelihood" value={likelihood} />
 				<InputNumber
 					value={likelihood}
-					onValueChange={(e) => setLikelihood(e.value ?? 3)}
+					onValueChange={(e) => { setLikelihood((e.value as number | null) ?? 3) }}
 					min={1}
 					max={5}
 					showButtons
@@ -285,7 +286,7 @@ function RiskItemFields({
 				<input type="hidden" name="impact" value={impact} />
 				<InputNumber
 					value={impact}
-					onValueChange={(e) => setImpact(e.value ?? 3)}
+					onValueChange={(e) => { setImpact((e.value as number | null) ?? 3) }}
 					min={1}
 					max={5}
 					showButtons
@@ -305,7 +306,7 @@ function RiskItemFields({
 				<input type="hidden" name="treatment" value={treatment} />
 				<Dropdown
 					value={treatment}
-					onChange={(e) => setTreatment(e.value)}
+					onChange={(e) => { setTreatment(e.value as string) }}
 					options={treatmentOptions}
 					className="w-full"
 				/>
@@ -363,17 +364,15 @@ function EditRiskItemDialog({
 	onHide: () => void
 }) {
 	const fetcher = useFetcher()
-	const fetcherErrors = fetcher.data && "errors" in fetcher.data
-		? (fetcher.data.errors as FieldErrors)
-		: undefined
+	const fetcherData = fetcher.data as { errors?: FieldErrors } | undefined
+	const fetcherErrors = fetcherData?.errors
 	useActionToast(fetcher.data as Parameters<typeof useActionToast>[0])
 
 	useEffect(() => {
 		if (fetcher.data && (fetcher.data as { ok?: boolean }).ok) {
 			onHide()
 		}
-	// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [fetcher.data])
+	}, [fetcher.data, onHide])
 
 	return (
 		<Dialog
@@ -549,7 +548,7 @@ function RiskItemsSection({
 					header="Score"
 					field="riskScore"
 					sortable
-					body={(item) => {
+					body={(item: RiskItem) => {
 						const level = riskLevel(item.riskScore)
 						return <span className="font-bold" style={levelStyles[level]}>{item.riskScore}</span>
 					}}
@@ -558,19 +557,19 @@ function RiskItemsSection({
 					header="Treatment"
 					field="treatment"
 					sortable
-					body={(item) => <span className="capitalize">{item.treatment}</span>}
+					body={(item: RiskItem) => <span className="capitalize">{item.treatment}</span>}
 				/>
 				{canEdit && (
 					<Column
 						header=""
-						body={(item) => (
+						body={(item: RiskItem) => (
 							<div className="flex gap-1">
 								<Button
 									icon="pi pi-pencil"
 									severity="secondary"
 									text
 									size="small"
-									onClick={() => setEditItem(item)}
+									onClick={() => { setEditItem(item) }}
 								/>
 								<Button
 									icon="pi pi-trash"
@@ -582,10 +581,10 @@ function RiskItemsSection({
 										header: "Confirm Deletion",
 										icon: "pi pi-exclamation-triangle",
 										acceptClassName: "p-button-danger",
-										accept: () => deleteFetcher.submit(
+										accept: () => { void deleteFetcher.submit(
 											{ intent: "delete-risk-item", itemId: item.id },
 											{ method: "post" }
-										),
+										) },
 									})}
 								/>
 							</div>
@@ -602,7 +601,7 @@ function RiskItemsSection({
 				key={editItem?.id ?? "none"}
 				item={editItem}
 				assessmentFramework={assessmentFramework}
-				onHide={() => setEditItem(null)}
+				onHide={() => { setEditItem(null) }}
 			/>
 		</>
 	)
@@ -613,8 +612,8 @@ export default function AssessmentDetailPage({ loaderData, actionData }: Route.C
 	useActionToast(actionData as Parameters<typeof useActionToast>[0])
 	useFlashToast()
 
-	const errors = actionData && "errors" in actionData
-		? (actionData.errors as FieldErrors)
+	const errors: FieldErrors | undefined = actionData && "errors" in actionData
+		? actionData.errors
 		: undefined
 
 	return (

@@ -88,7 +88,7 @@ export async function getActiveTeamsForUser(userId: string): Promise<typeof team
  */
 export async function createTeam(data: NewTeam) {
 	const [team] = await db.insert(teams).values(data).returning()
-	return team!
+	return team
 }
 
 /**

@@ -15,6 +15,7 @@ import type { Route } from "./+types/app.admin.users"
 import { useActionToast } from "../hooks/useActionToast"
 import { useFlashToast } from "../hooks/useFlashToast"
 import { requireRole, requireRoleLoader } from "../server/auth"
+import type { User } from "../server/schema"
 import { Role } from "../server/schema"
 import { hasRole } from "../lib/roles"
 import {
@@ -24,6 +25,7 @@ import {
 	softDeleteUser,
 	getAdminUserCount,
 } from "../server/queries/users"
+import { z } from "zod/v4"
 import { createUserSchema, updateUserRoleSchema } from "../lib/schemas/user"
 import { appendAudit } from "../server/queries/audits"
 
@@ -41,7 +43,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 	if (intent === "create-user") {
 		const parsed = createUserSchema.safeParse(Object.fromEntries(formData))
-		if (!parsed.success) return data({ errors: parsed.error.flatten().fieldErrors }, { status: 400 })
+		if (!parsed.success) return data({ errors: z.flattenError(parsed.error).fieldErrors }, { status: 400 })
 
 		const user = await createUser({
 			id: crypto.randomUUID(),
@@ -60,7 +62,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 	if (intent === "update-role") {
 		const parsed = updateUserRoleSchema.safeParse(Object.fromEntries(formData))
-		if (!parsed.success) return data({ errors: parsed.error.flatten().fieldErrors }, { status: 400 })
+		if (!parsed.success) return data({ errors: z.flattenError(parsed.error).fieldErrors }, { status: 400 })
 
 		const allUsers = await getAllUsers()
 		const target = allUsers.find((u) => u.id === parsed.data.userId)
@@ -125,7 +127,7 @@ function RoleCell({ user }: { user: User }) {
 
 	useEffect(() => {
 		if (prevState.current === "submitting" && fetcher.state === "idle") {
-			revalidator.revalidate()
+			void revalidator.revalidate()
 		}
 		prevState.current = fetcher.state
 	}, [fetcher.state, revalidator])
@@ -140,7 +142,7 @@ function RoleCell({ user }: { user: User }) {
 					fd.set("intent", "update-role")
 					fd.set("userId", user.id)
 					fd.set("role", String(e.value))
-					fetcher.submit(fd, { method: "post" })
+					void fetcher.submit(fd, { method: "post" })
 				}}
 				className="w-40"
 			/>
@@ -187,7 +189,7 @@ function CreateUserForm({ errors }: { errors?: Record<string, string[] | undefin
 					<input type="hidden" name="role" value={role} />
 					<Dropdown
 						value={role}
-						onChange={(e) => setRole(e.value)}
+						onChange={(e) => { setRole(e.value as number) }}
 						options={roleOptions}
 						className="w-full"
 					/>
@@ -255,11 +257,11 @@ export default function AdminUsersPage({ loaderData, actionData }: Route.Compone
 			>
 				<Column field="fullName" header="Name" sortable />
 				<Column field="email" header="Email" sortable />
-				<Column header="Student ID" body={(u) => u.studentId ?? "—"} sortable field="studentId" />
+				<Column header="Student ID" body={(u: User) => u.studentId ?? "—"} sortable field="studentId" />
 				<Column header="Role" body={(u: User) => <RoleCell user={u} />} />
 				<Column
 					header="Status"
-					body={(u) =>
+					body={(u: User) =>
 						u.workosId
 							? <Tag severity="success" value="Linked" />
 							: <Tag severity="warning" value="Pending" />
@@ -269,7 +271,7 @@ export default function AdminUsersPage({ loaderData, actionData }: Route.Compone
 				/>
 				<Column
 					header="Actions"
-					body={(u) => (
+					body={(u: User) => (
 						<Form method="post" style={{ display: "inline" }}>
 							<input type="hidden" name="intent" value="delete-user" />
 							<input type="hidden" name="userId" value={u.id} />

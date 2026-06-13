@@ -8,6 +8,7 @@ import type { Route } from "./+types/app.teams.$teamId.assessments.new"
 import { requireUser, requireUserLoader } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
 import { getTeamById, createAssessment } from "../server/queries"
+import { z } from "zod/v4"
 import { createAssessmentSchema } from "../lib/schemas/assessment"
 import { appendAudit } from "../server/queries/audits"
 
@@ -33,7 +34,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 	const formData = await request.formData()
 	const parsed = createAssessmentSchema.safeParse(Object.fromEntries(formData))
 	if (!parsed.success) {
-		return data({ errors: parsed.error.flatten().fieldErrors }, { status: 400 })
+		return data({ errors: z.flattenError(parsed.error).fieldErrors }, { status: 400 })
 	}
 
 	const assessment = await createAssessment({
@@ -83,7 +84,7 @@ export default function NewAssessmentPage({ loaderData, actionData }: Route.Comp
 					<input type="hidden" name="framework" value={framework} />
 					<Dropdown
 						value={framework}
-						onChange={(e) => setFramework(e.value)}
+						onChange={(e) => { setFramework(e.value as string) }}
 						options={frameworkOptions}
 						className="w-full"
 					/>

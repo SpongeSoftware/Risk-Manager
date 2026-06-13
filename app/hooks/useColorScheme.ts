@@ -1,4 +1,4 @@
-import { useStore } from "@tanstack/react-store"
+import { useSelector } from "@tanstack/react-store"
 import { useEffect } from "react"
 import { setColorScheme, appStore, type ColorScheme } from "../store"
 
@@ -18,7 +18,7 @@ const DARK_THEME = "/themes/lara-dark-purple/theme.css"
  * @returns An object with `colorScheme` (current value) and `setColorScheme` (setter).
  */
 export function useColorScheme() {
-	const colorScheme = useStore(appStore, (s) => s.colorScheme)
+	const colorScheme = useSelector(appStore, (s) => s.colorScheme)
 
 	useEffect(() => {
 		const mq = window.matchMedia("(prefers-color-scheme: dark)")
@@ -46,7 +46,7 @@ export function useColorScheme() {
 		}
 
 		mq.addEventListener("change", onSystemChange)
-		return () => mq.removeEventListener("change", onSystemChange)
+		return () => { mq.removeEventListener("change", onSystemChange) }
 	}, [colorScheme])
 
 	return { colorScheme, setColorScheme }

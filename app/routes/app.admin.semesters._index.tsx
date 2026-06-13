@@ -110,7 +110,7 @@ export default function AdminSemestersPage({ loaderData, actionData }: Route.Com
 					header="Period"
 					field="period"
 					sortable
-					body={(s) => (s.period === "summer" ? "Summer" : `Semester ${s.period}`)}
+					body={(s: (typeof semesters)[number]) => (s.period === "summer" ? "Summer" : `Semester ${s.period}`)}
 				/>
 				<Column field="startDate" header="Start" sortable />
 				<Column field="endDate" header="End" sortable />
@@ -118,7 +118,7 @@ export default function AdminSemestersPage({ loaderData, actionData }: Route.Com
 					header="Active"
 					field="isActive"
 					sortable
-					body={(s) => (
+					body={(s: (typeof semesters)[number]) => (
 						<Form method="post" style={{ display: "inline" }}>
 							<input type="hidden" name="intent" value="toggle-active" />
 							<input type="hidden" name="id" value={s.id} />
@@ -127,14 +127,14 @@ export default function AdminSemestersPage({ loaderData, actionData }: Route.Com
 								severity={s.isActive ? "success" : "warning"}
 								value={s.isActive ? "Active" : "Inactive"}
 								className="cursor-pointer"
-								onClick={(e) => (e.currentTarget.closest("form") as HTMLFormElement)?.requestSubmit()}
+								onClick={(e) => { (e.currentTarget.closest("form"))?.requestSubmit() }}
 							/>
 						</Form>
 					)}
 				/>
 				<Column
 					header="Actions"
-					body={(s) => (
+					body={(s: (typeof semesters)[number]) => (
 						<Form method="post" style={{ display: "inline" }}>
 							<input type="hidden" name="intent" value="delete" />
 							<input type="hidden" name="id" value={s.id} />

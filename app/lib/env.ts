@@ -16,10 +16,10 @@ export const env = createEnv({
 		TURSO_AUTH_TOKEN: z.string().optional(),
 		WORKOS_CLIENT_ID: z.string().min(1),
 		WORKOS_API_KEY: z.string().min(1),
-		WORKOS_REDIRECT_URI: z.string().url(),
+		WORKOS_REDIRECT_URI: z.url(),
 		WORKOS_COOKIE_PASSWORD: z.string().min(32),
-		BOOTSTRAP_ADMIN_EMAIL: z.string().email().optional(),
-		SENTRY_DSN: z.string().url().optional(),
+		BOOTSTRAP_ADMIN_EMAIL: z.email().optional(),
+		SENTRY_DSN: z.url().optional(),
 		SENTRY_ORG: z.string().optional(),
 		SENTRY_PROJECT: z.string().optional(),
 		SENTRY_AUTH_TOKEN: z.string().optional(),
@@ -30,6 +30,6 @@ export const env = createEnv({
 	},
 	runtimeEnv: {
 		...process.env,
-		VITE_APP_ENV: process.env["APP_ENV"],
+		VITE_APP_ENV: process.env.APP_ENV,
 	},
 })

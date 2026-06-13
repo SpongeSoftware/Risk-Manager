@@ -4,7 +4,7 @@ import { requireRoleLoader } from "../server/auth"
 import { Role } from "../server/schema"
 
 export async function loader(args: Route.LoaderArgs) {
-	return requireRoleLoader(args, Role.Admin, async () => ({}))
+	return requireRoleLoader(args, Role.Admin, () => ({}))
 }
 
 const sections = [

@@ -41,7 +41,7 @@ export async function getAssessmentById(id: number) {
  */
 export async function createAssessment(data: NewAssessment) {
 	const [assessment] = await db.insert(assessments).values(data).returning()
-	return assessment!
+	return assessment
 }
 
 /**

@@ -10,7 +10,8 @@ import type { User } from "../server/schema"
  * @throws {Error} If called outside the `_app` layout route tree.
  */
 export function useCurrentUser(): User {
-	const data = useRouteLoaderData("routes/_app") as { user: User } | undefined
+	const raw: unknown = useRouteLoaderData("routes/_app")
+	const data = raw as { user: User } | undefined
 	if (!data?.user) throw new Error("useCurrentUser must be used inside the _app layout route")
 	return data.user
 }

@@ -7,6 +7,7 @@ import { InputIcon } from "primereact/inputicon"
 import { FilterMatchMode } from "primereact/api"
 import type { Route } from "./+types/app.admin.audits"
 import { requireRoleLoader } from "../server/auth"
+import type { Audit } from "../server/schema"
 import { Role } from "../server/schema"
 import { getAllAudits } from "../server/queries/audits"
 import { formatDateTime } from "../lib/formatters"
@@ -20,16 +21,17 @@ export async function loader(args: Route.LoaderArgs) {
 
 function AuditValue({ value }: { value: string | null }) {
 	if (!value) return <span>—</span>
+	let parsed: unknown
 	try {
-		const parsed = JSON.parse(value)
-		return (
-			<pre style={{ fontSize: "0.7rem", maxWidth: 280, whiteSpace: "pre-wrap", margin: 0 }}>
-				{JSON.stringify(parsed, null, 2)}
-			</pre>
-		)
+		parsed = JSON.parse(value)
 	} catch {
 		return <span>{value}</span>
 	}
+	return (
+		<pre style={{ fontSize: "0.7rem", maxWidth: 280, whiteSpace: "pre-wrap", margin: 0 }}>
+			{JSON.stringify(parsed, null, 2)}
+		</pre>
+	)
 }
 
 export default function AdminAuditsPage({ loaderData }: Route.ComponentProps) {
@@ -76,13 +78,13 @@ export default function AdminAuditsPage({ loaderData }: Route.ComponentProps) {
 				sortMode="single"
 				removableSort
 			>
-				<Column header="Date" body={(a) => formatDateTime(a.createdDate)} sortable field="createdDate" />
-				<Column header="Entity" body={(a) => a.entityType.replace("_", " ")} className="capitalize" sortable field="entityType" />
+				<Column header="Date" body={(a: Audit) => formatDateTime(a.createdDate)} sortable field="createdDate" />
+				<Column header="Entity" body={(a: Audit) => a.entityType.replace("_", " ")} className="capitalize" sortable field="entityType" />
 				<Column header="ID" field="entityId" sortable />
 				<Column header="Action" field="action" className="capitalize" sortable />
-				<Column header="Field" body={(a) => a.fieldChanged ?? "—"} />
-				<Column header="Old" body={(a) => <AuditValue value={a.oldValue} />} />
-				<Column header="New" body={(a) => <AuditValue value={a.newValue} />} />
+				<Column header="Field" body={(a: Audit) => a.fieldChanged ?? "—"} />
+				<Column header="Old" body={(a: Audit) => <AuditValue value={a.oldValue} />} />
+				<Column header="New" body={(a: Audit) => <AuditValue value={a.newValue} />} />
 				<Column header="By" field="createdBy" sortable />
 			</DataTable>
 		</div>

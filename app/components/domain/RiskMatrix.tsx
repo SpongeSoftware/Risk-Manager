@@ -1,7 +1,7 @@
 import { riskLevel } from "../../lib/formatters"
 
 interface RiskMatrixProps {
-	items: Array<{ likelihood: number; impact: number; riskScore: number }>
+	items: { likelihood: number; impact: number; riskScore: number }[]
 }
 
 const cellStyles: Record<string, React.CSSProperties> = {

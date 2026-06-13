@@ -78,7 +78,7 @@ export default function AdminTeamsPage({ loaderData }: Route.ComponentProps) {
 					header="Status"
 					field="semesterActive"
 					sortable
-					body={(t) =>
+					body={(t: (typeof flatTeams)[number]) =>
 						t.semesterActive
 							? <Tag severity="success" value="Active" />
 							: <Tag severity="danger" value="Inactive" />
@@ -86,7 +86,7 @@ export default function AdminTeamsPage({ loaderData }: Route.ComponentProps) {
 				/>
 				<Column
 					header="Actions"
-					body={(t) => (
+					body={(t: (typeof flatTeams)[number]) => (
 						<div className="flex gap-2">
 							<Button
 								label="View"
