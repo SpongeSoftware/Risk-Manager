@@ -57,6 +57,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate route types
+        run: pnpm exec react-router typegen
+        env:
+          APP_ENV: production
+          TURSO_DATABASE_URL: file:./data/db.sqlite
+          WORKOS_CLIENT_ID: ci-placeholder
+          WORKOS_API_KEY: ci-placeholder
+          WORKOS_REDIRECT_URI: http://localhost:3000/callback
+          WORKOS_COOKIE_PASSWORD: ci-placeholder-32-chars-padded-000
+          VITE_APP_ENV: production
+
       - name: Lint
         run: pnpm lint
 
