@@ -5,22 +5,23 @@ import { Dropdown } from "primereact/dropdown"
 import { Button } from "primereact/button"
 import { Message } from "primereact/message"
 import type { Route } from "./+types/app.teams.$teamId.assessments.new"
-import { requireUser } from "../server/auth"
+import { requireUser, requireUserLoader } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
 import { getTeamById, createAssessment } from "../server/queries"
 import { createAssessmentSchema } from "../lib/schemas/assessment"
 import { appendAudit } from "../server/queries/audits"
 
-export async function loader({ request, params }: Route.LoaderArgs) {
-	const user = await requireUser(request)
-	const teamId = Number(params.teamId)
-	const team = await getTeamById(teamId)
-	if (!team) throw data("Team not found", { status: 404 })
-	if (!team.semester.isActive) throw data("Semester is no longer active", { status: 403 })
-	if (!hasRole(user.role, Role.Admin) && !hasRole(user.role, Role.Supervisor)) {
-		throw data("Access denied", { status: 403 })
-	}
-	return { team, user }
+export async function loader(args: Route.LoaderArgs) {
+	return requireUserLoader(args, async (user) => {
+		const teamId = Number(args.params.teamId)
+		const team = await getTeamById(teamId)
+		if (!team) throw data("Team not found", { status: 404 })
+		if (!team.semester.isActive) throw data("Semester is no longer active", { status: 403 })
+		if (!hasRole(user.role, Role.Admin) && !hasRole(user.role, Role.Supervisor)) {
+			throw data("Access denied", { status: 403 })
+		}
+		return { team, user }
+	})
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -43,8 +44,10 @@ export async function action({ request, params }: Route.ActionArgs) {
 		modifiedBy: user.id,
 	})
 
-	await appendAudit("assessment", assessment.id, "created", user.id)
-	throw redirect(`/teams/${teamId}/assessments/${assessment.id}`)
+	await appendAudit("assessment", assessment.id, "created", user.id, {
+		newValue: JSON.stringify(assessment),
+	})
+	throw redirect(`/teams/${teamId}/assessments/${assessment.id}?toastSeverity=success&toastSummary=Assessment+created`)
 }
 
 const frameworkOptions = [

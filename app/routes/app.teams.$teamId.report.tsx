@@ -2,33 +2,35 @@ import { data } from "react-router"
 import { Button } from "primereact/button"
 import { Tag } from "primereact/tag"
 import type { Route } from "./+types/app.teams.$teamId.report"
-import { requireUser } from "../server/auth"
+import { requireUserLoader } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
 import { getTeamById, getAssessmentsForTeam, getRiskItemsForAssessment } from "../server/queries"
 import { isUserInTeam } from "../server/queries/teams"
 import { riskLevel, riskLevelLabel, formatDate } from "../lib/formatters"
+import { RiskMatrix } from "../components/domain/RiskMatrix"
 
-export async function loader({ request, params }: Route.LoaderArgs) {
-	const user = await requireUser(request)
-	const teamId = Number(params.teamId)
+export async function loader(args: Route.LoaderArgs) {
+	return requireUserLoader(args, async (user) => {
+		const teamId = Number(args.params.teamId)
 
-	const team = await getTeamById(teamId)
-	if (!team) throw data("Not found", { status: 404 })
+		const team = await getTeamById(teamId)
+		if (!team) throw data("Not found", { status: 404 })
 
-	if (!hasRole(user.role, Role.Admin)) {
-		const inTeam = await isUserInTeam(user.id, teamId)
-		if (!inTeam) throw data("Access denied", { status: 403 })
-	}
+		if (!hasRole(user.role, Role.Admin)) {
+			const inTeam = await isUserInTeam(user.id, teamId)
+			if (!inTeam) throw data("Access denied", { status: 403 })
+		}
 
-	const assessments = await getAssessmentsForTeam(teamId)
-	const assessmentsWithItems = await Promise.all(
-		assessments.map(async (a) => ({
-			...a,
-			riskItems: await getRiskItemsForAssessment(a.id),
-		})),
-	)
+		const assessments = await getAssessmentsForTeam(teamId)
+		const assessmentsWithItems = await Promise.all(
+			assessments.map(async (a) => ({
+				...a,
+				riskItems: await getRiskItemsForAssessment(a.id),
+			})),
+		)
 
-	return { team, assessments: assessmentsWithItems, generatedAt: new Date().toISOString() }
+		return { team, assessments: assessmentsWithItems, generatedAt: new Date().toISOString() }
+	})
 }
 
 const levelColors: Record<string, string> = {
@@ -121,7 +123,12 @@ export default function ReportPage({ loaderData }: Route.ComponentProps) {
 								})}
 							</tbody>
 						</table>
-					)}
+				)}
+				{assessment.riskItems.length > 0 && (
+					<div className="mt-6 print:mt-4">
+						<RiskMatrix items={assessment.riskItems} />
+					</div>
+				)}
 				</section>
 			))}
 		</div>
