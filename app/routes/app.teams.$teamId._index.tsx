@@ -1,28 +1,53 @@
-import { data } from "react-router"
-import { Link, useNavigate } from "react-router"
+import { Suspense } from "react"
+import { data, Await, Link, useNavigate } from "react-router"
 import { Button } from "primereact/button"
 import { Tag } from "primereact/tag"
+import { Skeleton } from "primereact/skeleton"
 import type { Route } from "./+types/app.teams.$teamId._index"
-import { requireUser } from "../server/auth"
+import { requireUserLoader } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
 import { getTeamById, isUserInTeam, getAssessmentsForTeam } from "../server/queries"
 
-export async function loader({ request, params }: Route.LoaderArgs) {
-	const user = await requireUser(request)
-	const teamId = Number(params.teamId)
+export async function loader(args: Route.LoaderArgs) {
+	return requireUserLoader(args, async (user) => {
+		const teamId = Number(args.params.teamId)
 
-	const team = await getTeamById(teamId)
-	if (!team) throw data("Team not found", { status: 404 })
+		const team = await getTeamById(teamId)
+		if (!team) throw data("Team not found", { status: 404 })
 
-	if (!hasRole(user.role, Role.Admin)) {
-		const inTeam = await isUserInTeam(user.id, teamId)
-		if (!inTeam) throw data("Access denied", { status: 403 })
-	}
+		if (!hasRole(user.role, Role.Admin)) {
+			const inTeam = await isUserInTeam(user.id, teamId)
+			if (!inTeam) throw data("Access denied", { status: 403 })
+		}
 
-	const assessments = await getAssessmentsForTeam(teamId)
-	const isActive = team.semester.isActive
+		const isActive = team.semester.isActive
 
-	return { user, team, assessments, isActive }
+		return {
+			user,
+			team,
+			isActive,
+			assessments: getAssessmentsForTeam(teamId),
+		}
+	})
+}
+
+function AssessmentsSkeleton() {
+	return (
+		<div className="space-y-3">
+			{[1, 2, 3].map((i) => (
+				<div
+					key={i}
+					className="flex items-center justify-between p-4 bg-surface-0 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700"
+				>
+					<div>
+						<Skeleton width="12rem" height="1.1rem" className="mb-2" />
+						<Skeleton width="6rem" height="0.875rem" />
+					</div>
+					<Skeleton width="4rem" height="1.5rem" borderRadius="1rem" />
+				</div>
+			))}
+		</div>
+	)
 }
 
 export default function TeamDetailPage({ loaderData }: Route.ComponentProps) {
@@ -81,25 +106,33 @@ export default function TeamDetailPage({ loaderData }: Route.ComponentProps) {
 				)}
 			</div>
 
-			{assessments.length === 0 ? (
-				<p className="text-surface-500">No risk assessments yet.</p>
-			) : (
-				<div className="space-y-3">
-					{assessments.map((a) => (
-						<Link
-							key={a.id}
-							to={`/teams/${team.id}/assessments/${a.id}`}
-							className="flex items-center justify-between p-4 bg-surface-0 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 hover:border-purple-500 transition-colors"
-						>
-							<div>
-								<h3 className="font-medium text-surface-900 dark:text-surface-0">{a.title}</h3>
-								<p className="text-sm text-surface-500 mt-0.5">{a.framework}</p>
+			<Suspense fallback={<AssessmentsSkeleton />}>
+				<Await resolve={assessments}>
+					{(resolvedAssessments) =>
+						resolvedAssessments.length === 0 ? (
+							<p className="text-surface-500">No risk assessments yet.</p>
+						) : (
+							<div className="space-y-3">
+								{resolvedAssessments.map((a) => (
+									<Link
+										key={a.id}
+										to={`/teams/${team.id}/assessments/${a.id}`}
+										viewTransition
+										className="assessment-row flex items-center justify-between p-4 bg-surface-0 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 hover:border-purple-500 transition-colors"
+										style={{ "--vt-name": `assessment-row-${a.id}` } as React.CSSProperties}
+									>
+										<div>
+											<h3 className="font-medium text-surface-900 dark:text-surface-0">{a.title}</h3>
+											<p className="text-sm text-surface-500 mt-0.5">{a.framework}</p>
+										</div>
+										<Tag value={a.status} severity="info" />
+									</Link>
+								))}
 							</div>
-							<Tag value={a.status} severity="info" />
-						</Link>
-					))}
-				</div>
-			)}
+						)
+					}
+				</Await>
+			</Suspense>
 		</div>
 	)
 }
