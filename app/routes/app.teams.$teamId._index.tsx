@@ -6,7 +6,7 @@ import { Skeleton } from "primereact/skeleton"
 import type { Route } from "./+types/app.teams.$teamId._index"
 
 export const meta: Route.MetaFunction = ({ loaderData }) => [
-	{ title: `Risk Management — ${loaderData.team.name}` },
+	{ title: `Risk Management — ${loaderData?.team.name ?? "Team"}` },
 ]
 import { requireUserLoader } from "../server/auth"
 import { Role, hasRole } from "../server/schema"

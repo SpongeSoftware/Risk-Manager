@@ -21,7 +21,7 @@ import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog"
 import type { Route } from "./+types/app.teams.$teamId.assessments.$assessmentId"
 
 export const meta: Route.MetaFunction = ({ loaderData }) => [
-	{ title: `Risk Management — ${loaderData.assessment.title}` },
+	{ title: `Risk Management — ${loaderData?.assessment.title ?? "Assessment"}` },
 ]
 
 import { requireUser, requireUserLoader } from "../server/auth"
