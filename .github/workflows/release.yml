@@ -27,6 +27,7 @@ jobs:
       contents: write
     env:
       FLY_APP: risk-manager
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - uses: actions/checkout@v4
