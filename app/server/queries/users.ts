@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { and, eq, isNull, ne, sql } from "drizzle-orm"
 import { db } from "../db"
 import { users } from "../schema"
 import type { NewUser } from "../schema"
@@ -122,4 +122,18 @@ export async function isFirstUser(): Promise<boolean> {
 		where: (u, { and, isNull, ne }) => and(isNull(u.deletedAt), ne(u.id, "system")),
 	})
 	return !result
+}
+
+/**
+ * Counts active (non-deleted, non-system) users that hold the Admin role flag.
+ * Used to guard against removing the last admin.
+ *
+ * @returns The number of active admin users.
+ */
+export async function getAdminUserCount(): Promise<number> {
+	const [row] = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(users)
+		.where(and(isNull(users.deletedAt), ne(users.id, "system"), sql`${users.role} & 4 != 0`))
+	return Number(row!.count)
 }
