@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { data } from "react-router"
+import { useState, useEffect, useRef } from "react"
+import { data, redirect, useFetcher, useRevalidator, Form } from "react-router"
 import { InputText } from "primereact/inputtext"
 import { Dropdown } from "primereact/dropdown"
 import { Button } from "primereact/button"
@@ -7,18 +7,31 @@ import { Tag } from "primereact/tag"
 import { DataTable } from "primereact/datatable"
 import { Column } from "primereact/column"
 import { Message } from "primereact/message"
+import { Card } from "primereact/card"
+import { IconField } from "primereact/iconfield"
+import { InputIcon } from "primereact/inputicon"
+import { FilterMatchMode } from "primereact/api"
 import type { Route } from "./+types/app.admin.users"
-import { requireRole } from "../server/auth"
+import { useActionToast } from "../hooks/useActionToast"
+import { useFlashToast } from "../hooks/useFlashToast"
+import { requireRole, requireRoleLoader } from "../server/auth"
 import { Role } from "../server/schema"
-import { getAllUsers, createUser, updateUserRole, softDeleteUser } from "../server/queries/users"
+import { hasRole } from "../lib/roles"
+import {
+	getAllUsers,
+	createUser,
+	updateUserRole,
+	softDeleteUser,
+	getAdminUserCount,
+} from "../server/queries/users"
 import { createUserSchema, updateUserRoleSchema } from "../lib/schemas/user"
 import { appendAudit } from "../server/queries/audits"
-import { getRoleLabel } from "../lib/roles"
 
-export async function loader({ request }: Route.LoaderArgs) {
-	await requireRole(request, Role.Admin)
-	const users = await getAllUsers()
-	return { users }
+export async function loader(args: Route.LoaderArgs) {
+	return requireRoleLoader(args, Role.Admin, async () => {
+		const users = await getAllUsers()
+		return { users }
+	})
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -39,24 +52,56 @@ export async function action({ request }: Route.ActionArgs) {
 			createdBy: actor.id,
 			modifiedBy: actor.id,
 		})
-		await appendAudit("user", user.id, "created", actor.id)
+		await appendAudit("user", user.id, "created", actor.id, {
+			newValue: JSON.stringify(user),
+		})
+		return data({ ok: true, toast: { severity: "success" as const, summary: "User created" } })
 	}
 
 	if (intent === "update-role") {
 		const parsed = updateUserRoleSchema.safeParse(Object.fromEntries(formData))
 		if (!parsed.success) return data({ errors: parsed.error.flatten().fieldErrors }, { status: 400 })
 
+		const allUsers = await getAllUsers()
+		const target = allUsers.find((u) => u.id === parsed.data.userId)
+		if (target && hasRole(target.role, Role.Admin) && !hasRole(parsed.data.role, Role.Admin)) {
+			const adminCount = await getAdminUserCount()
+			if (adminCount <= 1) {
+				return data({ errors: { role: ["At least one Admin must remain"] }, toast: { severity: "error" as const, summary: "At least one Admin must remain" } }, { status: 400 })
+			}
+		}
+
 		await updateUserRole(parsed.data.userId, parsed.data.role, actor.id)
 		await appendAudit("user", parsed.data.userId, "updated", actor.id, {
 			fieldChanged: "role",
+			oldValue: target ? String(target.role) : undefined,
 			newValue: String(parsed.data.role),
 		})
+
+		if (parsed.data.userId === actor.id) {
+			throw redirect("/admin/users?toastSeverity=success&toastSummary=Role+updated")
+		}
+
+		return data({ ok: true, toast: { severity: "success" as const, summary: "Role updated" } })
 	}
 
 	if (intent === "delete-user") {
 		const userId = formData.get("userId") as string
+
+		const allUsers = await getAllUsers()
+		const target = allUsers.find((u) => u.id === userId)
+		if (target && hasRole(target.role, Role.Admin)) {
+			const adminCount = await getAdminUserCount()
+			if (adminCount <= 1) {
+				return data({ errors: { delete: ["Cannot delete the last Admin account"] }, toast: { severity: "error" as const, summary: "Cannot delete the last Admin account" } }, { status: 400 })
+			}
+		}
+
 		await softDeleteUser(userId, actor.id)
-		await appendAudit("user", userId, "deleted", actor.id)
+		await appendAudit("user", userId, "deleted", actor.id, {
+			oldValue: target ? JSON.stringify(target) : undefined,
+		})
+		return data({ ok: true, toast: { severity: "success" as const, summary: "User deleted" } })
 	}
 
 	return data({ ok: true })
@@ -70,17 +115,50 @@ const roleOptions = [
 	{ label: "Student + Supervisor", value: 3 },
 ]
 
-function CreateUserForm({ errors }: { errors?: Record<string, string[]> }) {
+type User = Awaited<ReturnType<typeof getAllUsers>>[number]
+
+function RoleCell({ user }: { user: User }) {
+	const fetcher = useFetcher()
+	const revalidator = useRevalidator()
+	const prevState = useRef(fetcher.state)
+	useActionToast(fetcher.data as Parameters<typeof useActionToast>[0])
+
+	useEffect(() => {
+		if (prevState.current === "submitting" && fetcher.state === "idle") {
+			revalidator.revalidate()
+		}
+		prevState.current = fetcher.state
+	}, [fetcher.state, revalidator])
+
+	return (
+		<fetcher.Form method="post">
+			<Dropdown
+				value={user.role}
+				options={roleOptions}
+				onChange={(e) => {
+					const fd = new FormData()
+					fd.set("intent", "update-role")
+					fd.set("userId", user.id)
+					fd.set("role", String(e.value))
+					fetcher.submit(fd, { method: "post" })
+				}}
+				className="w-40"
+			/>
+		</fetcher.Form>
+	)
+}
+
+function CreateUserForm({ errors }: { errors?: Record<string, string[] | undefined> }) {
 	const [role, setRole] = useState(1)
 
 	return (
-		<div className="bg-surface-0 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 p-5 mb-6">
-			<h2 className="font-semibold text-surface-900 dark:text-surface-0 mb-4">Create Account</h2>
-			<form method="post" className="grid grid-cols-1 md:grid-cols-3 gap-4">
+		<Card className="mb-6">
+			<h2 className="font-semibold mb-4">Create Account</h2>
+			<Form method="post" className="grid grid-cols-1 md:grid-cols-3 gap-4">
 				<input type="hidden" name="intent" value="create-user" />
 
 				<div>
-					<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
+					<label className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
 						Full Name
 					</label>
 					<InputText name="fullName" required className="w-full" />
@@ -88,7 +166,7 @@ function CreateUserForm({ errors }: { errors?: Record<string, string[]> }) {
 				</div>
 
 				<div>
-					<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
+					<label className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
 						Email
 					</label>
 					<InputText name="email" type="email" required className="w-full" />
@@ -96,14 +174,14 @@ function CreateUserForm({ errors }: { errors?: Record<string, string[]> }) {
 				</div>
 
 				<div>
-					<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
+					<label className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
 						Student ID (optional)
 					</label>
 					<InputText name="studentId" className="w-full" />
 				</div>
 
 				<div>
-					<label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
+					<label className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
 						Role
 					</label>
 					<input type="hidden" name="role" value={role} />
@@ -118,29 +196,67 @@ function CreateUserForm({ errors }: { errors?: Record<string, string[]> }) {
 				<div className="flex items-end">
 					<Button type="submit" label="Create" icon="pi pi-user-plus" />
 				</div>
-			</form>
-		</div>
+			</Form>
+		</Card>
 	)
 }
 
 export default function AdminUsersPage({ loaderData, actionData }: Route.ComponentProps) {
 	const { users } = loaderData
-	const errors = actionData && "errors" in actionData ? actionData.errors : undefined
+	const errors = actionData && "errors" in actionData ? (actionData.errors as Record<string, string[] | undefined>) : undefined
+	useActionToast(actionData as Parameters<typeof useActionToast>[0])
+	useFlashToast()
 	const tableUsers = users.filter((u) => u.id !== "system")
+
+	const [globalFilterValue, setGlobalFilterValue] = useState("")
+	const [filters, setFilters] = useState({
+		global: { value: null as string | null, matchMode: FilterMatchMode.CONTAINS },
+	})
+
+	function onGlobalFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
+		const value = e.target.value
+		setFilters({ global: { value: value || null, matchMode: FilterMatchMode.CONTAINS } })
+		setGlobalFilterValue(value)
+	}
+
+	const tableHeader = (
+		<div className="flex justify-between items-center">
+			<span className="text-sm text-surface-500">
+				{tableUsers.length} user{tableUsers.length !== 1 ? "s" : ""}
+			</span>
+			<IconField iconPosition="left">
+				<InputIcon className="pi pi-search" />
+				<InputText value={globalFilterValue} onChange={onGlobalFilterChange} placeholder="Search users..." />
+			</IconField>
+		</div>
+	)
 
 	return (
 		<div>
-			<h1 className="text-2xl font-bold text-surface-900 dark:text-surface-0 mb-6">
-				User Management
-			</h1>
+			<h1 className="text-2xl font-bold mb-6">User Management</h1>
 
 			<CreateUserForm errors={errors} />
 
-			<DataTable value={tableUsers} stripedRows emptyMessage="No users found.">
-				<Column field="fullName" header="Name" />
-				<Column field="email" header="Email" />
-				<Column header="Student ID" body={(u) => u.studentId ?? "—"} />
-				<Column header="Role" body={(u) => getRoleLabel(u.role)} />
+			{errors?.role && <Message severity="error" text={errors.role[0]} className="w-full mb-4" />}
+			{errors?.delete && <Message severity="error" text={errors.delete[0]} className="w-full mb-4" />}
+
+			<DataTable
+				value={tableUsers}
+				stripedRows
+				emptyMessage="No users found."
+				paginator
+				rows={10}
+				rowsPerPageOptions={[5, 10, 25]}
+				filters={filters}
+				globalFilterFields={["fullName", "email", "studentId"]}
+				header={tableHeader}
+				sortMode="single"
+				removableSort
+			>
+				<Column field="fullName" header="Name" sortable />
+				<Column field="email" header="Email" sortable />
+				<Column header="Student ID" body={(u) => u.studentId ?? "—"} sortable field="studentId" />
+				<Column header="Role" body={(u: User) => <RoleCell user={u} />} />
 				<Column
 					header="Status"
 					body={(u) =>
@@ -148,11 +264,13 @@ export default function AdminUsersPage({ loaderData, actionData }: Route.Compone
 							? <Tag severity="success" value="Linked" />
 							: <Tag severity="warning" value="Pending" />
 					}
+					sortable
+					field="workosId"
 				/>
 				<Column
 					header="Actions"
 					body={(u) => (
-						<form method="post" style={{ display: "inline" }}>
+						<Form method="post" style={{ display: "inline" }}>
 							<input type="hidden" name="intent" value="delete-user" />
 							<input type="hidden" name="userId" value={u.id} />
 							<Button
@@ -165,7 +283,7 @@ export default function AdminUsersPage({ loaderData, actionData }: Route.Compone
 									if (!confirm(`Delete ${u.fullName}?`)) e.preventDefault()
 								}}
 							/>
-						</form>
+						</Form>
 					)}
 				/>
 			</DataTable>

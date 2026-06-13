@@ -1,21 +1,22 @@
 import { useState } from "react"
-import { data, redirect } from "react-router"
+import { data, redirect, Form } from "react-router"
 import { useNavigate } from "react-router"
 import { InputText } from "primereact/inputtext"
 import { InputNumber } from "primereact/inputnumber"
 import { Dropdown } from "primereact/dropdown"
+import { Calendar } from "primereact/calendar"
 import { Button } from "primereact/button"
 import { Message } from "primereact/message"
+import { Card } from "primereact/card"
 import type { Route } from "./+types/app.admin.semesters.new"
-import { requireRole } from "../server/auth"
+import { requireRole, requireRoleLoader } from "../server/auth"
 import { Role } from "../server/schema"
 import { createSemester } from "../server/queries"
 import { createSemesterSchema } from "../lib/schemas/semester"
 import { appendAudit } from "../server/queries/audits"
 
-export async function loader({ request }: Route.LoaderArgs) {
-	await requireRole(request, Role.Admin)
-	return {}
+export async function loader(args: Route.LoaderArgs) {
+	return requireRoleLoader(args, Role.Admin, async () => ({}))
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -29,8 +30,10 @@ export async function action({ request }: Route.ActionArgs) {
 		createdBy: actor.id,
 		modifiedBy: actor.id,
 	})
-	await appendAudit("semester", semester.id, "created", actor.id)
-	throw redirect("/admin/semesters")
+	await appendAudit("semester", semester.id, "created", actor.id, {
+		newValue: JSON.stringify(semester),
+	})
+	throw redirect("/admin/semesters?toastSeverity=success&toastSummary=Semester+created")
 }
 
 const periodOptions = [
@@ -39,80 +42,101 @@ const periodOptions = [
 	{ label: "Summer", value: "summer" },
 ]
 
+function toIsoDate(d: Date | null | undefined): string {
+	if (!d) return ""
+	return d.toISOString().slice(0, 10)
+}
+
 export default function NewSemesterPage({ actionData }: Route.ComponentProps) {
 	const errors = actionData?.errors
 	const navigate = useNavigate()
 	const [year, setYear] = useState<number>(new Date().getFullYear())
 	const [period, setPeriod] = useState("1")
+	const [startDate, setStartDate] = useState<Date | null>(null)
+	const [endDate, setEndDate] = useState<Date | null>(null)
 
 	return (
 		<div className="max-w-xl">
-			<h1 className="text-2xl font-bold text-surface-900 dark:text-surface-0 mb-6">
-				Create Semester
-			</h1>
-			<form method="post" className="space-y-4 bg-surface-0 dark:bg-surface-800 p-6 rounded-xl border border-surface-200 dark:border-surface-700">
-				<div>
-					<label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-						Semester Name
-					</label>
-					<InputText name="name" required className="w-full" />
-					{errors?.name && <Message severity="error" text={errors.name[0]} className="w-full mt-1" />}
-				</div>
+			<h1 className="text-2xl font-bold mb-6">Create Semester</h1>
+			<Card>
+				<Form method="post" className="space-y-4">
+					<div>
+						<label className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
+							Semester Name
+						</label>
+						<InputText name="name" required className="w-full" />
+						{errors?.name && <Message severity="error" text={errors.name[0]} className="w-full mt-1" />}
+					</div>
 
-				<div>
-					<label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-						Year
-					</label>
-					<input type="hidden" name="year" value={year} />
-					<InputNumber
-						value={year}
-						onValueChange={(e) => setYear(e.value ?? new Date().getFullYear())}
-						useGrouping={false}
-						className="w-full"
-					/>
-					{errors?.year && <Message severity="error" text={errors.year[0]} className="w-full mt-1" />}
-				</div>
+					<div>
+						<label className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
+							Year
+						</label>
+						<input type="hidden" name="year" value={year} />
+						<InputNumber
+							value={year}
+							onValueChange={(e) => setYear(e.value ?? new Date().getFullYear())}
+							useGrouping={false}
+							className="w-full"
+						/>
+						{errors?.year && <Message severity="error" text={errors.year[0]} className="w-full mt-1" />}
+					</div>
 
-				<div>
-					<label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-						Period
-					</label>
-					<input type="hidden" name="period" value={period} />
-					<Dropdown
-						value={period}
-						onChange={(e) => setPeriod(e.value)}
-						options={periodOptions}
-						className="w-full"
-					/>
-				</div>
+					<div>
+						<label className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
+							Period
+						</label>
+						<input type="hidden" name="period" value={period} />
+						<Dropdown
+							value={period}
+							onChange={(e) => setPeriod(e.value)}
+							options={periodOptions}
+							className="w-full"
+						/>
+					</div>
 
-				<div>
-					<label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-						Start Date
-					</label>
-					<InputText name="startDate" type="date" required className="w-full" />
-					{errors?.startDate && <Message severity="error" text={errors.startDate[0]} className="w-full mt-1" />}
-				</div>
+					<div>
+						<label className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
+							Start Date
+						</label>
+						<input type="hidden" name="startDate" value={toIsoDate(startDate)} />
+						<Calendar
+							value={startDate}
+							onChange={(e) => setStartDate(e.value ?? null)}
+							dateFormat="dd/mm/yy"
+							showIcon
+							className="w-full"
+						/>
+						{errors?.startDate && <Message severity="error" text={errors.startDate[0]} className="w-full mt-1" />}
+					</div>
 
-				<div>
-					<label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-						End Date
-					</label>
-					<InputText name="endDate" type="date" required className="w-full" />
-					{errors?.endDate && <Message severity="error" text={errors.endDate[0]} className="w-full mt-1" />}
-				</div>
+					<div>
+						<label className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
+							End Date
+						</label>
+						<input type="hidden" name="endDate" value={toIsoDate(endDate)} />
+						<Calendar
+							value={endDate}
+							onChange={(e) => setEndDate(e.value ?? null)}
+							dateFormat="dd/mm/yy"
+							showIcon
+							className="w-full"
+						/>
+						{errors?.endDate && <Message severity="error" text={errors.endDate[0]} className="w-full mt-1" />}
+					</div>
 
-				<div className="flex gap-3 pt-2">
-					<Button type="submit" label="Create Semester" icon="pi pi-check" />
-					<Button
-						type="button"
-						label="Cancel"
-						outlined
-						severity="secondary"
-						onClick={() => navigate("/admin/semesters")}
-					/>
-				</div>
-			</form>
+					<div className="flex gap-3 pt-2">
+						<Button type="submit" label="Create Semester" icon="pi pi-check" />
+						<Button
+							type="button"
+							label="Cancel"
+							outlined
+							severity="secondary"
+							onClick={() => navigate("/admin/semesters")}
+						/>
+					</div>
+				</Form>
+			</Card>
 		</div>
 	)
 }

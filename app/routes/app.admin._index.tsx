@@ -1,11 +1,10 @@
 import { Link } from "react-router"
 import type { Route } from "./+types/app.admin._index"
-import { requireRole } from "../server/auth"
+import { requireRoleLoader } from "../server/auth"
 import { Role } from "../server/schema"
 
-export async function loader({ request }: Route.LoaderArgs) {
-	await requireRole(request, Role.Admin)
-	return {}
+export async function loader(args: Route.LoaderArgs) {
+	return requireRoleLoader(args, Role.Admin, async () => ({}))
 }
 
 const sections = [

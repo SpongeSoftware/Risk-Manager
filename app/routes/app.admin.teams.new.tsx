@@ -6,16 +6,17 @@ import { Dropdown } from "primereact/dropdown"
 import { Button } from "primereact/button"
 import { Message } from "primereact/message"
 import type { Route } from "./+types/app.admin.teams.new"
-import { requireRole } from "../server/auth"
+import { requireRole, requireRoleLoader } from "../server/auth"
 import { Role } from "../server/schema"
 import { getActiveSemesters, createTeam } from "../server/queries"
 import { createTeamSchema } from "../lib/schemas/team"
 import { appendAudit } from "../server/queries/audits"
 
-export async function loader({ request }: Route.LoaderArgs) {
-	await requireRole(request, Role.Admin)
-	const semesters = await getActiveSemesters()
-	return { semesters }
+export async function loader(args: Route.LoaderArgs) {
+	return requireRoleLoader(args, Role.Admin, async () => {
+		const semesters = await getActiveSemesters()
+		return { semesters }
+	})
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -30,8 +31,10 @@ export async function action({ request }: Route.ActionArgs) {
 		createdBy: actor.id,
 		modifiedBy: actor.id,
 	})
-	await appendAudit("team", team.id, "created", actor.id)
-	throw redirect(`/teams/${team.id}/members`)
+	await appendAudit("team", team.id, "created", actor.id, {
+		newValue: JSON.stringify(team),
+	})
+	throw redirect(`/teams/${team.id}/members?toastSeverity=success&toastSummary=Team+created`)
 }
 
 export default function NewTeamPage({ loaderData, actionData }: Route.ComponentProps) {
