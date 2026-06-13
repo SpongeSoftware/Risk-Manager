@@ -1,6 +1,8 @@
+import { useRef, useEffect } from "react"
 import { useStore } from "@tanstack/react-store"
+import { Toast } from "primereact/toast"
 import type { User } from "../../server/schema"
-import { appStore } from "../../store"
+import { appStore, dismissToast } from "../../store"
 import { useColorScheme } from "../../hooks/useColorScheme"
 import { Sidebar } from "./Sidebar"
 import { TopBar } from "./TopBar"
@@ -21,10 +23,28 @@ interface AppShellProps {
  */
 export function AppShell({ user, children }: AppShellProps) {
 	const collapsed = useStore(appStore, (s) => s.sidebarCollapsed)
+	const toasts = useStore(appStore, (s) => s.toasts)
+	const toastRef = useRef<Toast>(null)
+	const shownIds = useRef(new Set<string>())
 	useColorScheme()
+
+	useEffect(() => {
+		toasts.forEach((t) => {
+			if (!shownIds.current.has(t.id)) {
+				shownIds.current.add(t.id)
+				toastRef.current?.show({
+					severity: t.severity,
+					summary: t.summary,
+					detail: t.detail,
+					life: 4000,
+				})
+			}
+		})
+	}, [toasts])
 
 	return (
 		<div className="app-shell">
+			<Toast ref={toastRef} onRemove={(msg) => { if (msg.id) dismissToast(msg.id as string) }} />
 			<Sidebar user={user} collapsed={collapsed} />
 			<div className="main-content">
 				<TopBar user={user} />
