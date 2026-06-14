@@ -14,8 +14,12 @@ export default function LoginPage({ loaderData }: Route.ComponentProps) {
 	const { signInUrl, error } = loaderData
 
 	return (
-		<div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-900">
-			<div className="w-full max-w-md p-8 bg-surface-0 dark:bg-surface-800 rounded-2xl shadow-lg text-center">
+		<div
+			className="min-h-screen flex items-center justify-center bg-cover bg-center relative"
+			style={{ backgroundImage: "url('https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1920&q=80')" }}
+		>
+			<div className="absolute inset-0 bg-black/60" />
+			<div className="relative z-10 w-full max-w-md p-8 bg-surface-0 dark:bg-surface-800 rounded-2xl shadow-lg text-center">
 				<div className="mb-6">
 					<i className="pi pi-shield text-5xl text-purple-600 mb-4 block" />
 					<h1 className="text-2xl font-bold text-surface-900 dark:text-surface-0">
@@ -34,7 +38,7 @@ export default function LoginPage({ loaderData }: Route.ComponentProps) {
 
 				<a href={signInUrl} className="block w-full p-button p-component p-button-primary justify-center">
 					<i className="p-button-icon pi pi-sign-in mr-2" />
-					<span className="p-button-label">Sign in with WorkOS</span>
+					<span className="p-button-label">Sign in</span>
 				</a>
 			</div>
 		</div>
