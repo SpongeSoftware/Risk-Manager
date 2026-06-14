@@ -2,7 +2,7 @@ import { Form } from "react-router"
 import { Button } from "primereact/button"
 import type { User } from "../../server/schema"
 import { getRoleLabel } from "../../lib/roles"
-import { setColorScheme, appStore } from "../../store"
+import { setColorScheme, openMobileSidebar, appStore } from "../../store"
 import { useSelector } from "@tanstack/react-store"
 import type { ColorScheme } from "../../store"
 import { Logo } from "../ui/Logo"
@@ -31,8 +31,20 @@ export function TopBar({ user }: TopBarProps) {
 	const colorScheme = useSelector(appStore, (s) => s.colorScheme)
 
 	return (
-		<header className="topbar border-b flex items-center justify-between px-6">
-			<Logo className="h-7" />
+		<header className="topbar border-b flex items-center justify-between px-4 md:px-6">
+			<div className="flex items-center gap-3">
+				<Button
+					icon="pi pi-bars"
+					text
+					rounded
+					size="small"
+					className="md:hidden"
+					onClick={openMobileSidebar}
+					aria-label="Open menu"
+					type="button"
+				/>
+				<Logo className="h-7" />
+			</div>
 
 			<div className="flex items-center gap-4">
 				{/* Theme toggle */}
@@ -55,7 +67,7 @@ export function TopBar({ user }: TopBarProps) {
 
 				{/* User info + sign out */}
 				<div className="flex items-center gap-3">
-					<div className="text-right">
+					<div className="hidden md:block text-right">
 						<p className="topbar-username text-sm font-medium">
 							{user.fullName}
 						</p>

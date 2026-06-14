@@ -188,6 +188,7 @@ export default function TeamMembersPage({ loaderData, actionData }: Route.Compon
 			<div className="mb-6">
 				<DataTable
 					value={flatMembers}
+					scrollable
 					stripedRows
 					emptyMessage="No members yet."
 					paginator

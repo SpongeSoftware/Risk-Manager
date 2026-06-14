@@ -68,10 +68,10 @@ export default function AdminAuditsPage({ loaderData }: Route.ComponentProps) {
 
 			<DataTable
 				value={audits}
+				scrollable
 				stripedRows
 				emptyMessage="No audit entries yet."
 				className="text-sm"
-				scrollable
 				paginator
 				rows={25}
 				rowsPerPageOptions={[10, 25, 50]}

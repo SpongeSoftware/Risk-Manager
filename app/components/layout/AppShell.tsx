@@ -2,7 +2,7 @@ import { useRef, useEffect } from "react"
 import { useSelector } from "@tanstack/react-store"
 import { Toast } from "primereact/toast"
 import type { User } from "../../server/schema"
-import { appStore, dismissToast } from "../../store"
+import { appStore, dismissToast, closeMobileSidebar } from "../../store"
 import { useColorScheme } from "../../hooks/useColorScheme"
 import { Sidebar } from "./Sidebar"
 import { TopBar } from "./TopBar"
@@ -23,6 +23,7 @@ interface AppShellProps {
  */
 export function AppShell({ user, children }: AppShellProps) {
 	const collapsed = useSelector(appStore, (s) => s.sidebarCollapsed)
+	const mobileOpen = useSelector(appStore, (s) => s.sidebarMobileOpen)
 	const toasts = useSelector(appStore, (s) => s.toasts)
 	const toastRef = useRef<Toast>(null)
 	const shownIds = useRef(new Set<string>())
@@ -45,7 +46,11 @@ export function AppShell({ user, children }: AppShellProps) {
 	return (
 		<div className="app-shell">
 			<Toast ref={toastRef} onRemove={(msg) => { if (msg.id) dismissToast(msg.id) }} />
-			<Sidebar user={user} collapsed={collapsed} />
+			<div
+				className={`sidebar-overlay${mobileOpen ? " mobile-open" : ""}`}
+				onClick={closeMobileSidebar}
+			/>
+			<Sidebar user={user} collapsed={collapsed} mobileOpen={mobileOpen} />
 			<div className="main-content">
 				<TopBar user={user} />
 				<main className="page-content">{children}</main>

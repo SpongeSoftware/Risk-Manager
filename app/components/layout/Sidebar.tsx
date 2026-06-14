@@ -2,12 +2,13 @@ import { NavLink, useViewTransitionState } from "react-router"
 import { Button } from "primereact/button"
 import type { User } from "../../server/schema"
 import { hasRole, Role } from "../../lib/roles"
-import { toggleSidebar } from "../../store"
+import { toggleSidebar, closeMobileSidebar } from "../../store"
 import { Logo, LogoIcon } from "../ui/Logo"
 
 interface SidebarProps {
 	user: User
 	collapsed: boolean
+	mobileOpen: boolean
 }
 
 interface NavItem {
@@ -47,6 +48,7 @@ function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
 			to={item.to}
 			end={item.to === "/"}
 			viewTransition
+			onClick={closeMobileSidebar}
 			className={({ isActive }) =>
 				`nav-item flex items-center gap-3 px-4 py-3 transition-colors${isActive ? " active" : ""}${isTransitioning ? " transitioning" : ""}`
 			}
@@ -57,11 +59,11 @@ function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
 	)
 }
 
-export function Sidebar({ user, collapsed }: SidebarProps) {
+export function Sidebar({ user, collapsed, mobileOpen }: SidebarProps) {
 	const isAdmin = hasRole(user.role, Role.Admin)
 
 	return (
-		<aside className={`sidebar flex flex-col ${collapsed ? "collapsed" : ""}`}>
+		<aside className={`sidebar flex flex-col${collapsed ? " collapsed" : ""}${mobileOpen ? " mobile-open" : ""}`}>
 			<div className="sidebar-header flex items-center justify-between px-4 py-4 border-b">
 				{collapsed ? (
 					<LogoIcon className="h-7 w-7" />

@@ -20,7 +20,8 @@ export function RiskMatrix({ items }: RiskMatrixProps) {
 	}
 
 	return (
-		<div className="flex gap-2 items-start">
+		<div className="overflow-x-auto">
+		<div className="flex gap-2 items-start" style={{ minWidth: "20rem" }}>
 			{/* Y-axis label */}
 			<div className="flex items-center justify-center" style={{ width: "1.25rem", alignSelf: "stretch" }}>
 				<span
@@ -81,6 +82,7 @@ export function RiskMatrix({ items }: RiskMatrixProps) {
 					Impact
 				</div>
 			</div>
+		</div>
 		</div>
 	)
 }
