@@ -21,68 +21,68 @@ export function RiskMatrix({ items }: RiskMatrixProps) {
 
 	return (
 		<div className="overflow-x-auto">
-		<div className="flex gap-2 items-start" style={{ minWidth: "20rem" }}>
-			{/* Y-axis label */}
-			<div className="flex items-center justify-center" style={{ width: "1.25rem", alignSelf: "stretch" }}>
-				<span
-					className="text-xs text-surface-500 font-medium select-none whitespace-nowrap"
-					style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-				>
+			<div className="flex gap-2 items-start" style={{ minWidth: "20rem" }}>
+				{/* Y-axis label */}
+				<div className="flex items-center justify-center" style={{ width: "1.25rem", alignSelf: "stretch" }}>
+					<span
+						className="text-xs text-surface-500 font-medium select-none whitespace-nowrap"
+						style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+					>
 					Likelihood
-				</span>
-			</div>
-
-			<div>
-				{/* Column headers */}
-				<div className="grid mb-1" style={{ gridTemplateColumns: "2rem repeat(5, 3rem)" }}>
-					<div />
-					{impacts.map((i) => (
-						<div key={i} className="text-center text-xs text-surface-500 font-medium">{i}</div>
-					))}
+					</span>
 				</div>
 
-				{/* Rows */}
-				{likelihoods.map((l) => (
-					<div key={l} className="grid mb-1" style={{ gridTemplateColumns: "2rem repeat(5, 3rem)" }}>
-						<div className="text-center text-xs text-surface-500 font-medium self-center">{l}</div>
-						{impacts.map((i) => {
-							const score = l * i
-							const level = riskLevel(score)
-							const count = countAt(l, i)
-							return (
-								<div
-									key={i}
-									className="h-12 rounded flex flex-col items-center justify-center text-xs font-bold mx-0.5"
-									style={cellStyles[level]}
-								>
-									<span>{score}</span>
-									{count > 0 && (
-										<span
-											className="rounded-full text-white flex items-center justify-center mt-0.5 bg-surface-900 dark:bg-surface-0"
-											style={{
-												minWidth: "1.1rem",
-												height: "1.1rem",
-												fontSize: "0.65rem",
-											}}
-										>
-											{count}
-										</span>
-									)}
-								</div>
-							)
-						})}
+				<div>
+					{/* Column headers */}
+					<div className="grid mb-1" style={{ gridTemplateColumns: "2rem repeat(5, 3rem)" }}>
+						<div />
+						{impacts.map((i) => (
+							<div key={i} className="text-center text-xs text-surface-500 font-medium">{i}</div>
+						))}
 					</div>
-				))}
 
-				{/* X-axis label */}
-				<div
-					className="text-center text-xs text-surface-500 font-medium mt-1"
-					style={{ gridColumn: "2 / -1", paddingLeft: "2rem" }}
-				>
+					{/* Rows */}
+					{likelihoods.map((l) => (
+						<div key={l} className="grid mb-1" style={{ gridTemplateColumns: "2rem repeat(5, 3rem)" }}>
+							<div className="text-center text-xs text-surface-500 font-medium self-center">{l}</div>
+							{impacts.map((i) => {
+								const score = l * i
+								const level = riskLevel(score)
+								const count = countAt(l, i)
+								return (
+									<div
+										key={i}
+										className="h-12 rounded flex flex-col items-center justify-center text-xs font-bold mx-0.5"
+										style={cellStyles[level]}
+									>
+										<span>{score}</span>
+										{count > 0 && (
+											<span
+												className="rounded-full text-white flex items-center justify-center mt-0.5 bg-surface-900 dark:bg-surface-0"
+												style={{
+													minWidth: "1.1rem",
+													height: "1.1rem",
+													fontSize: "0.65rem",
+												}}
+											>
+												{count}
+											</span>
+										)}
+									</div>
+								)
+							})}
+						</div>
+					))}
+
+					{/* X-axis label */}
+					<div
+						className="text-center text-xs text-surface-500 font-medium mt-1"
+						style={{ gridColumn: "2 / -1", paddingLeft: "2rem" }}
+					>
 					Impact
+					</div>
 				</div>
 			</div>
-		</div>
 		</div>
 	)
 }
