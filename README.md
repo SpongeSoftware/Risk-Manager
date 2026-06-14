@@ -2,26 +2,23 @@
   <img src="public/logo.svg" alt="Risk Manager" height="60" />
 </p>
 
-# Risk Manager
+<h1 align="center">Risk Manager</h1>
 
-[![MIT License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
-[![CI](https://github.com/SpongeSoftware/Risk-Manager/actions/workflows/ci.yml/badge.svg)](https://github.com/SpongeSoftware/Risk-Manager/actions/workflows/ci.yml)
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple.svg" alt="MIT License" /></a>
+  <a href="https://github.com/SpongeSoftware/Risk-Manager/actions/workflows/ci.yml"><img src="https://github.com/SpongeSoftware/Risk-Manager/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+</p>
 
-A full-stack web application for conducting and managing risk assessments aligned with **ISO 27001 (2022)** and **SOC 2** standards. Built for university teaching — students work in teams to identify, evaluate, and treat risks, with supervisors providing feedback and admins managing the platform.
+<p align="center">
+  A full-stack web application for conducting and managing risk assessments aligned with <strong>ISO 27001 (2022)</strong> and <strong>SOC 2</strong> standards.<br />
+  Built for university teaching — students work in teams to identify, evaluate, and treat risks, with supervisors providing feedback and admins managing the platform.
+</p>
 
 ---
 
-## Features
+Risk Manager gives each student team a structured workspace to build and maintain a risk register. Risks are scored on a **5×5 likelihood × impact matrix** that automatically assigns criticality levels (Low, Medium, High, Critical). Supervisors leave feedback directly on assessments, every change is captured in a full audit trail, and admins control the semester lifecycle — closing a semester locks assessments and prevents student sign-in.
 
-- **Risk Assessments** — Create assessments against ISO 27001, SOC 2, or both frameworks
-- **5×5 Risk Matrix** — Likelihood × Impact scoring with automatic criticality levels (Low · Medium · High · Critical)
-- **Team Management** — Students grouped into teams per semester; supervisors allocated to one or more teams
-- **Role-Based Access** — Bitwise role flags (Student · Supervisor · Admin) with granular, server-enforced permissions
-- **Supervisor Feedback** — Supervisors can leave comments on any risk assessment
-- **Full Audit Trail** — Every change is logged with before/after values; supervisors see team audits, admins see everything
-- **On-Screen Reports** — Print-friendly per-team risk summary with totals and criticality breakdown
-- **Dark / Light / System Theme** — PrimeReact lara-purple with seamless toggle in the navigation bar
-- **Semester Lifecycle** — Teams are tied to semesters; inactive semesters make assessments read-only and prevent student sign-in
+**Highlights:** dual-framework support (ISO 27001 + SOC 2) · role-based access enforced server-side · print-friendly per-team reports · dark/light/system theme · full audit history with before/after values
 
 ---
 
@@ -41,31 +38,14 @@ A full-stack web application for conducting and managing risk assessments aligne
 
 ---
 
-## Table of Contents
-
-1. [Development Setup](#development-setup)
-2. [Configuration Reference](#configuration-reference)
-3. [Production Deployment (Fly.io)](#production-deployment-flyio)
-4. [Custom Domain & SSL](#custom-domain--ssl)
-5. [GitHub Secrets Setup](#github-secrets-setup)
-6. [GitHub Actions & CI/CD](#github-actions--cicd)
-7. [Creating Releases](#creating-releases)
-8. [Repository Security](#repository-security)
-9. [Scripts](#scripts)
-10. [Roles](#roles)
-11. [Bootstrapping the First Admin](#bootstrapping-the-first-admin)
-12. [Sentry Environment Separation](#sentry-environment-separation)
-
----
-
 ## Development Setup
 
 ### Prerequisites
 
 - [Node.js](https://nodejs.org) ≥ 22
-- [pnpm](https://pnpm.io) 10.15.1 — install with `npm install -g pnpm` (version is pinned via the `packageManager` field; corepack will enforce it automatically)
+- [pnpm](https://pnpm.io) 10.15.1 — `npm install -g pnpm` (version pinned via `packageManager`; corepack enforces it automatically)
 - A [WorkOS](https://workos.com) account with an AuthKit application configured
-- A [Turso](https://turso.tech) database **or** use local SQLite (no account needed for local dev)
+- A [Turso](https://turso.tech) database **or** local SQLite (no account needed for local dev)
 
 ### 1. Clone and install
 
@@ -77,10 +57,11 @@ pnpm install
 
 ### 2. Set up environment variables
 
-Create `.env`, open and fill in your credentials. The minimum required for local development:
+Create a `.env` file with the minimum required for local development:
 
 ```env
 APP_ENV=development
+VITE_APP_ENV=development
 
 # Use local SQLite — no Turso account needed for dev
 TURSO_DATABASE_URL=file:./data/db.sqlite
@@ -91,41 +72,35 @@ WORKOS_API_KEY=sk_...
 WORKOS_REDIRECT_URI=http://localhost:5173/callback
 WORKOS_COOKIE_PASSWORD=replace-with-a-random-32-character-secret
 
-# Your email — auto-provisioned as Admin on first sign-in
+# Auto-provisioned as Admin on first sign-in (remove after initial setup)
 BOOTSTRAP_ADMIN_EMAIL=you@example.com
 ```
 
 > Sentry variables are optional in development — Sentry is disabled when `APP_ENV=development`.
 
-### 3. Set up WorkOS
+### 3. Configure WorkOS
 
 In your [WorkOS dashboard](https://dashboard.workos.com):
 
-1. Create a new application (or use an existing one)
-2. Enable **AuthKit** for the application
-3. Add `http://localhost:5173/callback` to the list of **Redirect URIs**
-4. Copy the **Client ID** and **API Key** into your `.env`
+1. Create a new application and enable **AuthKit**
+2. Add `http://localhost:5173/callback` as a **Redirect URI**
+3. Copy the **Client ID** and **API Key** into your `.env`
 
-### 4. Run database migrations
-
-```bash
-pnpm db:migrate
-```
-
-This creates the SQLite database at `./data/db.sqlite` and seeds the internal `system` user.
-
-### 5. Start the dev server
+### 4. Run migrations and start the server
 
 ```bash
-pnpm dev
+pnpm db:migrate   # creates ./data/db.sqlite and seeds the system user
+pnpm dev          # http://localhost:5173
 ```
 
-Open [http://localhost:5173](http://localhost:5173). Sign in with your `BOOTSTRAP_ADMIN_EMAIL` — your Admin account is created automatically on first sign-in.
+Sign in with your `BOOTSTRAP_ADMIN_EMAIL` — the Admin account is created automatically on first sign-in.
+
+> **First admin:** `BOOTSTRAP_ADMIN_EMAIL` only takes effect when no other users exist. After the first Admin is created, all subsequent accounts must be provisioned through the **Users** management page. The variable can be removed from the environment once setup is complete.
 
 ### Useful dev tools
 
 ```bash
-pnpm db:studio    # Browse the database visually at http://localhost:4983
+pnpm db:studio    # Drizzle Studio at http://localhost:4983
 pnpm storybook    # Component explorer at http://localhost:6006
 ```
 
@@ -144,66 +119,72 @@ pnpm storybook    # Component explorer at http://localhost:6006
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `TURSO_DATABASE_URL` | Yes | `file:./data/db.sqlite` | Connection URL. Use `file:./data/db.sqlite` for local dev, or a `libsql://` URL for Turso cloud. |
-| `TURSO_AUTH_TOKEN` | No | — | Required when connecting to a remote Turso database. Not needed for local SQLite. |
+| `TURSO_DATABASE_URL` | Yes | `file:./data/db.sqlite` | Use `file:./data/db.sqlite` for local dev, or a `libsql://` URL for Turso cloud. |
+| `TURSO_AUTH_TOKEN` | No | — | Required for remote Turso databases. Not needed for local SQLite. |
 
 ### Authentication (WorkOS)
 
 | Variable | Required | Description |
 |---|---|---|
-| `WORKOS_CLIENT_ID` | Yes | Your WorkOS application's Client ID. Found in the WorkOS dashboard. |
+| `WORKOS_CLIENT_ID` | Yes | Your WorkOS application's Client ID. |
 | `WORKOS_API_KEY` | Yes | Your WorkOS API secret key. Never expose this to the browser. |
-| `WORKOS_REDIRECT_URI` | Yes | The OAuth callback URL. Must be registered in WorkOS. Dev: `http://localhost:5173/callback`. Prod: `https://your-domain.com/callback`. |
-| `WORKOS_COOKIE_PASSWORD` | Yes | A random secret used to encrypt the session cookie. Must be at least 32 characters. Generate with: `openssl rand -hex 32` |
-| `BOOTSTRAP_ADMIN_EMAIL` | No | The email address that will be auto-provisioned as Admin on first sign-in. Only works if no other users exist yet. Safe to remove from env after initial setup. |
+| `WORKOS_REDIRECT_URI` | Yes | OAuth callback URL. Dev: `http://localhost:5173/callback`. Prod: `https://your-domain.com/callback`. Must be registered in WorkOS. |
+| `WORKOS_COOKIE_PASSWORD` | Yes | Random secret for session cookie encryption. Minimum 32 characters — generate with `openssl rand -hex 32`. |
+| `BOOTSTRAP_ADMIN_EMAIL` | No | Email auto-provisioned as Admin on first sign-in, when no other users exist. |
 
 ### Error Tracking (Sentry)
 
 All Sentry variables are optional. Sentry is disabled when `APP_ENV=development`.
 
-| Variable | Required | Description |
-|---|---|---|
-| `SENTRY_DSN` | No | Your Sentry project's DSN. Copy from Sentry → Project → Settings → Client Keys. |
-| `SENTRY_ORG` | No | Your Sentry organisation slug. Required for source map upload at build time. |
-| `SENTRY_PROJECT` | No | Your Sentry project slug. |
-| `SENTRY_AUTH_TOKEN` | No | A Sentry auth token with `project:releases` and `org:read` scopes. Required for source map upload. |
+| Variable | Description |
+|---|---|
+| `SENTRY_DSN` | Your Sentry project DSN. Found at Sentry → Project → Settings → Client Keys. |
+| `SENTRY_ORG` | Organisation slug. Required for source map upload at build time. |
+| `SENTRY_PROJECT` | Project slug. |
+| `SENTRY_AUTH_TOKEN` | Auth token with `project:releases` and `org:read` scopes. Set as a GitHub secret for CI builds — not a Fly secret. |
+
+**Sentry behaviour by environment:**
+
+| `APP_ENV` | Behaviour |
+|---|---|
+| `development` | Disabled — no noise during local development |
+| `test` | Enabled, tagged as `test` — errors don't pollute production dashboards |
+| `production` | Fully enabled, source maps uploaded at build time for readable stack traces |
 
 ---
 
 ## Production Deployment (Fly.io)
 
-[Fly.io](https://fly.io) is the recommended hosting platform. The free tier includes enough resources for a teaching app (3 shared VMs). Turso handles the database — only the Node.js server needs hosting.
+[Fly.io](https://fly.io) is the recommended hosting platform — the free tier is sufficient for a teaching app. Turso handles the database; only the Node.js server needs hosting.
+
+<details>
+<summary>Step-by-step first-time deploy</summary>
 
 ### Prerequisites
 
 - A [Fly.io](https://fly.io) account (free)
-- [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/) installed:
+- Fly CLI installed:
   ```bash
-  # macOS
-  brew install flyctl
-
-  # Linux / WSL
-  curl -L https://fly.io/install.sh | sh
+  brew install flyctl          # macOS
+  curl -L https://fly.io/install.sh | sh   # Linux / WSL
   ```
 - A [Turso](https://turso.tech) database (free tier available)
 
-### Step 1: Sign in to Fly
+### Step 1 — Sign in
 
 ```bash
 fly auth login
 ```
 
-### Step 2: Create the Fly app
+### Step 2 — Create the app
 
 ```bash
 fly apps create risk-manager
 ```
 
-Choose the region closest to your users. The `fly.toml` file in this repo defaults to `syd` (Sydney) — update `primary_region` if needed.
+The `fly.toml` in this repo defaults to the `syd` (Sydney) region — update `primary_region` if needed.
 
-### Step 3: Set production secrets
-
-Fly stores secrets as encrypted environment variables. Set them all at once:
+### Step 3 — Set production secrets
 
 ```bash
 fly secrets set \
@@ -221,257 +202,128 @@ fly secrets set \
   SENTRY_PROJECT=risk-manager
 ```
 
-> The `SENTRY_AUTH_TOKEN` is only needed at **build time** (for source map upload). It is set as a GitHub secret, not a Fly secret.
+> `SENTRY_AUTH_TOKEN` is only needed at build time. Set it as a GitHub secret, not a Fly secret.
 
-### Step 4: Update WorkOS redirect URI
+### Step 4 — Register the WorkOS redirect URI
 
-In your [WorkOS dashboard](https://dashboard.workos.com), add your production callback URL to the allowed Redirect URIs:
+In the [WorkOS dashboard](https://dashboard.workos.com), add:
 
 ```
 https://risk-manager.fly.dev/callback
 ```
 
-### Step 5: Deploy
+### Step 5 — Deploy
 
 ```bash
 fly deploy
 ```
 
-Fly builds the Docker image, pushes it, and starts a VM. This takes 2–4 minutes on first deploy.
+The first deploy takes 2–4 minutes. Fly creates 2 machines by default — scale back to 1 for a teaching app:
 
-> **Note:** Fly creates 2 machines on first deploy for high availability. For a single-instance teaching app, scale back to 1 after the first deploy:
-> ```bash
-> fly scale count 1 --yes
-> ```
+```bash
+fly scale count 1 --yes
+```
 
-### Step 6: Run database migrations
+### Step 6 — Run migrations
 
 ```bash
 fly ssh console --app risk-manager --command "node --experimental-strip-types app/server/migrate.ts"
 ```
 
-### Step 7: Open the app
+### Step 7 — Open the app
 
 ```bash
 fly open
 ```
 
-Sign in with your `BOOTSTRAP_ADMIN_EMAIL` to complete first-time setup.
+Sign in with `BOOTSTRAP_ADMIN_EMAIL` to complete first-time setup.
 
-### Subsequent deploys
+</details>
 
-After the initial setup, all future deploys are handled automatically by Fly.io's GitHub integration — merging a PR to `main` triggers both a release (tag + GitHub Release + SBOM) and a production deployment. See [Creating Releases](#creating-releases) for details.
+After the initial setup, all future deploys happen automatically — merging a PR to `main` triggers the release workflow and Fly.io's GitHub integration deploys to production in parallel.
 
 ---
 
 ## Custom Domain & SSL
 
-Fly.io handles all TLS termination at its edge — your app only ever sees plain HTTP on port 3000 internally. Let's Encrypt certificates are provisioned and renewed automatically; you never manage cert files.
+Fly.io handles TLS termination at its edge. Let's Encrypt certificates are provisioned and renewed automatically — you never manage cert files. The `force_https = true` setting in `fly.toml` redirects all HTTP traffic to HTTPS before it reaches your app.
 
-The `force_https = true` setting in `fly.toml` means any HTTP (port 80) request is permanently redirected to HTTPS (port 443) before it reaches your app.
+The default `.fly.dev` subdomain works immediately with no DNS configuration. To add a custom domain:
 
-### Using the default `.fly.dev` subdomain
+<details>
+<summary>Custom domain setup</summary>
 
-No DNS configuration needed. Your app is reachable at `https://risk-manager.fly.dev` immediately after deployment, with a valid cert.
-
-### Adding a custom domain
-
-#### Step 1: Register the domain with Fly
+### Step 1 — Register with Fly
 
 ```bash
 fly certs add yourdomain.com
 ```
 
-Fly will output the DNS records you need to add. There are two options depending on your DNS provider:
+Fly outputs the DNS records to add. Use whichever record type your provider supports:
 
-**Option A — CNAME (recommended for subdomains like `app.yourdomain.com`):**
-```
-app.yourdomain.com  CNAME  risk-manager.fly.dev
-```
+| Type | When to use | Value |
+|---|---|---|
+| `CNAME` | Subdomains (e.g. `app.yourdomain.com`) | `risk-manager.fly.dev` |
+| `ALIAS` / `ANAME` | Apex domains (`yourdomain.com`) | `risk-manager.fly.dev` |
 
-**Option B — ALIAS / ANAME (for apex domains like `yourdomain.com`):**
-Some DNS providers support `ALIAS` or `ANAME` records for apex domains. If yours does not, use the A/AAAA records Fly provides instead.
+If your provider doesn't support `ALIAS`/`ANAME`, use the A/AAAA records Fly provides instead.
 
-#### Step 2: Add the DNS records
+### Step 2 — Add the DNS records
 
-Add the records at your DNS provider (e.g. Cloudflare, Route 53, Namecheap). DNS propagation typically takes a few minutes to an hour.
+Add the records at your DNS provider (Cloudflare, Route 53, Namecheap, etc.). Propagation typically takes a few minutes to an hour.
 
-#### Step 3: Verify
+### Step 3 — Verify
 
 ```bash
 fly certs show yourdomain.com
 ```
 
-Once DNS has propagated, Fly automatically provisions the Let's Encrypt certificate. The status will change from `Awaiting configuration` to `Certificate issued`.
+Once DNS propagates, Fly provisions the certificate automatically. Status changes from `Awaiting configuration` to `Certificate issued`.
 
-#### Step 4: Update WorkOS redirect URI
+### Step 4 — Update WorkOS and Fly secrets
 
-Add your custom domain callback URL in the [WorkOS dashboard](https://dashboard.workos.com):
+In the [WorkOS dashboard](https://dashboard.workos.com), add:
 
 ```
 https://yourdomain.com/callback
 ```
 
-Also update `WORKOS_REDIRECT_URI` in your Fly secrets:
+Then update the Fly secret:
 
 ```bash
 fly secrets set WORKOS_REDIRECT_URI=https://yourdomain.com/callback
 ```
 
-### Automation
-
-The `fly certs add` command is idempotent — it is safe to include in your deploy workflow and Fly will ignore it if the certificate already exists. The deploy workflow in this repo includes this step automatically.
-
----
-
-## GitHub Secrets Setup
-
-Production credentials are managed directly in Fly.io (via the dashboard or `fly secrets set`) and are not required as GitHub secrets. Fly.io's GitHub integration handles its own authentication.
-
-The only GitHub secret you may want to add is for Sentry source map uploads at build time (optional):
-
-| Secret | Where it's used | Description |
-|---|---|---|
-| `SENTRY_AUTH_TOKEN` | CI build | Source map upload token with `project:releases` and `org:read` scopes — enables readable stack traces in Sentry |
+</details>
 
 ---
 
 ## GitHub Actions & CI/CD
 
-Two workflows handle the full lifecycle:
-
-### CI — runs on every Pull Request
+### CI — runs on every pull request
 
 **File:** `.github/workflows/ci.yml`
 
-Runs three parallel jobs against every PR targeting `main`. All three must pass before a PR can be merged.
+Three jobs run in parallel against every PR targeting `main`. All must pass before merge.
 
 | Job | What it checks |
 |---|---|
-| `typecheck` | TypeScript strict mode — zero errors required |
-| `lint` | ESLint strict — zero warnings or errors required |
+| `typecheck` | TypeScript strict mode — zero errors |
+| `lint` | ESLint strict — zero warnings or errors |
 | `build` | Production build — must compile without errors |
 
-Merging to `main` triggers the release workflow automatically (patch version bump) and Fly.io's GitHub integration deploys the updated code to production.
-
-### Release — runs automatically on every merge to `main`
+### Release — runs on every merge to `main`
 
 **File:** `.github/workflows/release.yml`
 
-Fires on every push to `main` (i.e. every merged PR). It:
+On every push to `main` the workflow:
 
-1. Computes the next semantic version from the last git tag
+1. Computes the next patch version from the last git tag
 2. Creates and pushes the git tag
-3. Creates a GitHub Release with auto-generated changelog
-4. Generates a Software Bill of Materials (SBOM) and attaches it to the release
+3. Creates a GitHub Release with an auto-generated changelog
+4. Attaches a Software Bill of Materials (`sbom-vX.Y.Z.spdx.json`) to the release
 
-Deployment is handled separately by Fly.io's GitHub integration, which deploys to production automatically whenever code reaches `main`.
-
-The `workflow_dispatch` trigger is also available for admins who need to manually choose a `minor` or `major` bump instead of the default `patch`.
-
-See [Creating Releases](#creating-releases) for details.
-
----
-
-## Creating Releases
-
-Releases follow [semantic versioning](https://semver.org) starting from `v0.1.0`. The version is computed and tagged automatically — **no manual steps required for a standard patch release**.
-
-**Who can release:** Only repository admins and owners. Tag protection rules prevent non-admins from creating `v*` tags.
-
-### Standard release (patch bump)
-
-Simply merge a PR into `main`. The release workflow fires automatically and within ~1 minute:
-- Creates the git tag and GitHub Release with a generated changelog
-  - PR-based changes are grouped by label (features, bug fixes, etc.)
-  - Direct commits to `main` not associated with a PR are appended in a separate **Direct Commits** section
-- Attaches `sbom-vX.Y.Z.spdx.json` to the release assets
-
-Fly.io's GitHub integration deploys the updated code to production in parallel.
-
-### Manual release (minor or major bump)
-
-1. Go to **GitHub → Repository → Actions → Release**
-2. Click **"Run workflow"** (top right)
-3. Select the bump type:
-   - **`patch`** — bug fixes and minor changes (e.g. `v0.1.0` → `v0.1.1`)
-   - **`minor`** — new features, backwards-compatible (e.g. `v0.1.1` → `v0.2.0`)
-   - **`major`** — breaking changes (e.g. `v0.2.0` → `v1.0.0`)
-4. Click **"Run workflow"**
-
-### Labelling PRs for the changelog
-
-PRs are grouped in the release changelog by their GitHub labels:
-
-| Label | Changelog section |
-|---|---|
-| `enhancement`, `feature` | New Features |
-| `bug`, `fix` | Bug Fixes |
-| `security` | Security |
-| `dependencies` | Dependencies |
-| `chore`, `refactor`, `docs` | Maintenance |
-| `ignore-for-release` | Excluded from changelog |
-
----
-
-## Repository Security
-
-This is a **public repository** — anyone can read and fork the code. All write operations are restricted to authorised collaborators.
-
-### What's enforced automatically
-
-| Protection | Mechanism |
-|---|---|
-| No direct pushes to `main` | Branch protection — all changes require a reviewed PR |
-| CI must pass before merge | Branch protection — `typecheck`, `lint`, `build` required |
-| All PRs require owner review | `.github/CODEOWNERS` — `@ElCapitanSponge` must approve every PR |
-| Only admins can create releases | Tag protection ruleset on `v*` + `workflow_dispatch` requires write access |
-| Secrets never in code | All credentials stored as Fly.io secrets via dashboard or CLI — no GitHub secrets required for deployment |
-
-### One-time setup (run after creating the repo)
-
-Full instructions with CLI commands are in [`.github/BRANCH_PROTECTION.md`](.github/BRANCH_PROTECTION.md). Summary:
-
-**1. Branch protection on `main`:**
-```bash
-gh api repos/SpongeSoftware/Risk-Manager/branches/main/protection \
-  --method PUT \
-  --header "Accept: application/vnd.github+json" \
-  --field 'required_status_checks={"strict":true,"contexts":["typecheck","lint","build"]}' \
-  --field 'enforce_admins=false' \
-  --field 'required_pull_request_reviews={"required_approving_review_count":1,"dismiss_stale_reviews":true}' \
-  --field 'restrictions=null' \
-  --field 'allow_force_pushes=false' \
-  --field 'allow_deletions=false'
-```
-
-**2. Tag protection ruleset (restrict `v*` to admins):**
-```bash
-gh api repos/SpongeSoftware/Risk-Manager/rulesets \
-  --method POST \
-  --header "Accept: application/vnd.github+json" \
-  --field name="Release tags" \
-  --field target="tag" \
-  --field enforcement="active" \
-  --field conditions='{"ref_name":{"include":["refs/tags/v*"],"exclude":[]}}' \
-  --field rules='[{"type":"creation"},{"type":"deletion"}]' \
-  --field bypass_actors='[{"actor_id":5,"actor_type":"RepositoryRole","bypass_mode":"always"}]'
-```
-
-**3. Update `CODEOWNERS`:** Edit `.github/CODEOWNERS` and replace `@ElCapitanSponge` with your GitHub username.
-
-**4. Allow owner force push (UI only):** Settings → Branches → Edit `main` → "Allow force pushes" → "Specify who can force push" → add your username.
-
-### Additional hardening
-
-Go to **GitHub → Repository → Settings** and review:
-
-| Setting | Location | Recommended value |
-|---|---|---|
-| Fork PR workflow approval | Actions → General | "Require approval for first-time contributors" |
-| Wikis | General → Features | Disable if unused |
-| Discussions | General → Features | Enable or disable as needed |
-| Signed commits | Branch rule or Ruleset | Enable "Require signed commits" on `main` |
+Deployment runs in parallel via Fly.io's GitHub integration. A `workflow_dispatch` trigger is available for admins who need to manually cut a `minor` or `major` release instead of the default `patch`.
 
 ---
 
@@ -486,40 +338,22 @@ Go to **GitHub → Repository → Settings** and review:
 | `pnpm lint` | ESLint (strict, no Prettier) |
 | `pnpm db:generate` | Generate SQL migrations from schema changes |
 | `pnpm db:migrate` | Apply pending migrations |
-| `pnpm db:studio` | Open Drizzle Studio to browse your database |
-| `pnpm storybook` | Launch Storybook for UI component development |
+| `pnpm db:studio` | Open Drizzle Studio at http://localhost:4983 |
+| `pnpm storybook` | Launch Storybook at http://localhost:6006 |
 
 ---
 
 ## Roles
 
-Roles are stored as a **bitwise integer flag** so a single user can hold multiple roles.
+Roles are stored as a **bitwise integer flag** so a single user can hold multiple roles simultaneously.
 
 | Role | Value | Access |
 |---|---|---|
-| Student | 1 | View and edit risk assessments for their active team only |
-| Supervisor | 2 | Manage team members, leave feedback, view team audit trail |
-| Admin | 4 | Full access — manage users, teams, semesters, view all audits |
+| Student | `1` | View and edit risk assessments for their active team only |
+| Supervisor | `2` | Manage team members, leave feedback, view team audit trail |
+| Admin | `4` | Full access — manage users, teams, semesters, view all audits |
 
-Common combinations: `Supervisor + Admin = 6` · `Student + Supervisor = 3`
-
----
-
-## Bootstrapping the First Admin
-
-Set `BOOTSTRAP_ADMIN_EMAIL` in your `.env` file. When that email signs in for the first time via WorkOS and no other user accounts exist in the database, an Admin account is created automatically.
-
-After the first Admin account exists, all subsequent accounts must be created by an Admin through the **Users** management page. The `BOOTSTRAP_ADMIN_EMAIL` variable can be removed from the environment after initial setup.
-
----
-
-## Sentry Environment Separation
-
-| `APP_ENV` | Behaviour |
-|---|---|
-| `development` | Sentry is **disabled** — no noise during local development |
-| `test` | Sentry enabled, tagged as `test` — errors don't pollute production dashboards |
-| `production` | Fully enabled, source maps uploaded at build time for readable stack traces |
+Common combinations: `Student + Supervisor = 3` · `Supervisor + Admin = 6`
 
 ---
 
