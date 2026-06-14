@@ -384,7 +384,7 @@ function EditRiskItemDialog({
 			visible={!!item}
 			onHide={onHide}
 			header="Edit Risk Item"
-			style={{ width: "42rem" }}
+			style={{ width: "min(42rem, 92vw)" }}
 			modal
 			dismissableMask
 		>
@@ -533,6 +533,7 @@ function RiskItemsSection({
 
 			<DataTable
 				value={items}
+				scrollable
 				stripedRows
 				emptyMessage="No risk items yet."
 				className="text-sm"

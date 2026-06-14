@@ -18,6 +18,8 @@ export interface ToastMessage {
 export interface AppState {
 	/** Whether the navigation sidebar is collapsed to icon-only mode. */
 	sidebarCollapsed: boolean
+	/** Whether the mobile sidebar drawer is open. */
+	sidebarMobileOpen: boolean
 	/** When `true`, the sidebar teams list includes inactive semester teams. Supervisor-facing toggle. */
 	teamsShowInactive: boolean
 	/** Queue of pending toast notifications. */
@@ -37,6 +39,7 @@ function getInitialColorScheme(): ColorScheme {
 /** The singleton TanStack Store instance holding all client UI state. */
 export const appStore = new Store<AppState>({
 	sidebarCollapsed: false,
+	sidebarMobileOpen: false,
 	teamsShowInactive: false,
 	toasts: [],
 	editingRiskItemId: null,
@@ -48,6 +51,16 @@ export const appStore = new Store<AppState>({
  */
 export function toggleSidebar() {
 	appStore.setState((s) => ({ ...s, sidebarCollapsed: !s.sidebarCollapsed }))
+}
+
+/** Opens the mobile sidebar drawer. */
+export function openMobileSidebar() {
+	appStore.setState((s) => ({ ...s, sidebarMobileOpen: true }))
+}
+
+/** Closes the mobile sidebar drawer. */
+export function closeMobileSidebar() {
+	appStore.setState((s) => ({ ...s, sidebarMobileOpen: false }))
 }
 
 /**

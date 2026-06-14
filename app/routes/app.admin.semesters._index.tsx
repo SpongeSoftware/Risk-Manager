@@ -96,6 +96,7 @@ export default function AdminSemestersPage({ loaderData, actionData }: Route.Com
 
 			<DataTable
 				value={semesters}
+				scrollable
 				stripedRows
 				emptyMessage="No semesters found."
 				paginator

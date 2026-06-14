@@ -246,6 +246,7 @@ export default function AdminUsersPage({ loaderData, actionData }: Route.Compone
 
 			<DataTable
 				value={tableUsers}
+				scrollable
 				stripedRows
 				emptyMessage="No users found."
 				paginator

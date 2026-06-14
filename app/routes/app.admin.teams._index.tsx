@@ -64,6 +64,7 @@ export default function AdminTeamsPage({ loaderData }: Route.ComponentProps) {
 
 			<DataTable
 				value={flatTeams}
+				scrollable
 				stripedRows
 				emptyMessage="No teams found."
 				paginator

@@ -33,6 +33,42 @@
 	}
 }
 
+// Mobile sidebar overlay backdrop
+.sidebar-overlay {
+	display: none;
+	position: fixed;
+	inset: 0;
+	z-index: 99;
+	background: rgba(0, 0, 0, 0.4);
+
+	&.mobile-open {
+		display: block;
+	}
+}
+
+// Mobile: sidebar becomes a slide-in drawer
+@media (max-width: 767px) {
+	.app-shell {
+		.sidebar {
+			position: fixed;
+			top: 0;
+			left: 0;
+			bottom: 0;
+			z-index: 100;
+			transform: translateX(-100%);
+			width: $sidebar-width !important;
+
+			&.mobile-open {
+				transform: translateX(0);
+			}
+		}
+
+		.main-content {
+			width: 100%;
+		}
+	}
+}
+
 // Sidebar — uses semantic surface-card, adapts automatically with theme swap
 .sidebar {
 	background-color: var(--surface-card);
