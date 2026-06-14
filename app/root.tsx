@@ -1,6 +1,7 @@
 import { authkitLoader } from "@workos-inc/authkit-react-router"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { PrimeReactProvider } from "primereact/api"
+import { useColorScheme } from "./hooks/useColorScheme"
 import {
 	isRouteErrorResponse,
 	Links,
@@ -74,6 +75,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
  * the default PrimeReact styling active alongside Tailwind utility classes.
  */
 export default function App() {
+	useColorScheme()
 	return (
 		<QueryClientProvider client={queryClient}>
 			<PrimeReactProvider value={{ ripple: true, unstyled: false }}>
