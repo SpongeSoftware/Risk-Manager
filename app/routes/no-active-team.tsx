@@ -1,11 +1,13 @@
-import { signOut } from "@workos-inc/authkit-react-router"
 import { Button } from "primereact/button"
+import { redirect } from "react-router"
 import type { Route } from "./+types/no-active-team"
+import { destroySession } from "../server/session"
 
 export const meta: Route.MetaFunction = () => [{ title: "Risk Management — No Active Team" }]
 
 export async function action({ request }: Route.ActionArgs) {
-	return signOut(request)
+	const cookie = await destroySession(request)
+	return redirect("/login", { headers: { "Set-Cookie": cookie } })
 }
 
 export default function NoActiveTeamPage() {

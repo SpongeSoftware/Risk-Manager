@@ -21,7 +21,7 @@ import { getTeamById, getTeamMembers, addTeamMember, removeTeamMember } from "..
 import { getAllUsers } from "../server/queries/users"
 import { appendAudit } from "../server/queries/audits"
 import { z } from "zod/v4"
-import { addTeamMemberSchema } from "../lib/schemas/team"
+import { addTeamMemberSchema, removeTeamMemberSchema } from "../lib/schemas/team"
 
 export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Team Members" }]
 
@@ -63,7 +63,9 @@ export async function action({ request, params }: Route.ActionArgs) {
 	}
 
 	if (intent === "remove-member") {
-		const userId = formData.get("userId") as string
+		const parsed = removeTeamMemberSchema.safeParse(Object.fromEntries(formData))
+		if (!parsed.success) return data({ errors: z.flattenError(parsed.error).fieldErrors }, { status: 400 })
+		const userId = parsed.data.userId
 		const members = await getTeamMembers(teamId)
 		const member = members.find((m) => m.userId === userId)
 		await removeTeamMember(teamId, userId, user.id)

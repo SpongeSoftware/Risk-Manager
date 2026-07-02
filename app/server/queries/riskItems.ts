@@ -18,6 +18,23 @@ export async function getRiskItemsForAssessment(assessmentId: number) {
 }
 
 /**
+ * Fetches all risk items for a set of assessments in a single query, ordered by
+ * risk score descending. Excludes soft-deleted records. Used by the team report
+ * loader to avoid one query per assessment.
+ *
+ * @param assessmentIds - The assessments' numeric IDs.
+ * @returns An array of risk item records across all requested assessments.
+ */
+export async function getRiskItemsForAssessments(assessmentIds: number[]) {
+	if (assessmentIds.length === 0) return []
+	return db.query.riskItems.findMany({
+		where: (r, { and, inArray, isNull }) =>
+			and(inArray(r.assessmentId, assessmentIds), isNull(r.deletedAt)),
+		orderBy: (r, { desc }) => desc(r.riskScore),
+	})
+}
+
+/**
  * Fetches a single risk item by ID. Excludes soft-deleted records.
  *
  * @param id - The risk item's numeric ID.

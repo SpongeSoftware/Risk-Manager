@@ -12,6 +12,11 @@ export const addTeamMemberSchema = z.object({
 	memberRole: z.enum(["student", "supervisor"]),
 })
 
+/** Validation schema for the "Remove Member" form action on `/teams/:teamId/members`. */
+export const removeTeamMemberSchema = z.object({
+	userId: z.string().min(1),
+})
+
 /** Inferred TypeScript type for the create team form payload. */
 export type CreateTeamInput = z.infer<typeof createTeamSchema>
 /** Inferred TypeScript type for the add team member form payload. */

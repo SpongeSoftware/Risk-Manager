@@ -100,11 +100,12 @@ export default function NewSemesterPage({ actionData }: Route.ComponentProps) {
 					</div>
 
 					<div>
-						<label className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
+						<label htmlFor="startDate" className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
 							Start Date
 						</label>
 						<input type="hidden" name="startDate" value={toIsoDate(startDate)} />
 						<Calendar
+							inputId="startDate"
 							value={startDate}
 							onChange={(e) => { setStartDate(e.value ?? null) }}
 							dateFormat="dd/mm/yy"
@@ -115,11 +116,12 @@ export default function NewSemesterPage({ actionData }: Route.ComponentProps) {
 					</div>
 
 					<div>
-						<label className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
+						<label htmlFor="endDate" className="block text-sm font-medium mb-1" style={{ color: "var(--text-color-secondary)" }}>
 							End Date
 						</label>
 						<input type="hidden" name="endDate" value={toIsoDate(endDate)} />
 						<Calendar
+							inputId="endDate"
 							value={endDate}
 							onChange={(e) => { setEndDate(e.value ?? null) }}
 							dateFormat="dd/mm/yy"
