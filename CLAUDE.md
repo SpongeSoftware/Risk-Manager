@@ -29,12 +29,20 @@ pnpm storybook        # component explorer (port 6006)
 React Router v7 **framework mode** with SSR. Routes are defined in `app/routes.ts` using the code-based API (not file-system auto-discovery). Every route file exports `loader` (data loading) and/or `action` (mutations) + a default React component.
 
 ### Auth
-WorkOS `authkit-react-router`. The `app/server/auth.ts` module exports:
-- `requireUser(request)` — ensures user is signed in and pre-provisioned in the DB; redirects to `/login` otherwise
+Local email + password auth (no external provider). The `app/server/auth.ts` module exports:
+- `requireUser(request)` — resolves the session cookie to a DB user; redirects to `/login` otherwise
 - `requireRole(request, Role.Admin)` — calls `requireUser` + checks bitmask flag
 - `requireActiveTeam(request)` — for the `_app` layout: Supervisors/Admins always pass; Students need at least one active team
 
-The `app.tsx` layout loader wraps `authkitLoader` for session refresh and calls `requireActiveTeam`. All child routes call `requireUser` again for their own guards.
+The `app.tsx` layout loader calls `requireActiveTeam`. All child routes call `requireUser` again for their own guards.
+
+**Passwords** — hashed with scrypt (`app/server/password.ts`): per-user random salt, key stretching, stored as `scrypt$N$r$p$salt$hash` in `users.password_hash`. Never store or log plaintext passwords or raw tokens.
+
+**Sessions** — DB-backed (`sessions` table keyed by SHA-256 of an opaque token) with a signed HTTP-only cookie (`app/server/session.ts`). Logout deletes the row, so sessions are revocable. Env: `SESSION_SECRET` (≥32 chars).
+
+**Provisioning** — admins create accounts on `/admin/users`, then generate a one-time invite link (7-day expiry) that opens `/set-password`. Regenerating an invite is the password-reset path and revokes the user's sessions. The first admin is seeded by `pnpm db:migrate` from `BOOTSTRAP_ADMIN_EMAIL` + `BOOTSTRAP_ADMIN_PASSWORD`.
+
+**Rate limiting** — login attempts are throttled in-memory per email and per IP (`app/server/rate-limit.ts`).
 
 ### Database
 Turso (libsql) + Drizzle ORM. Schema is in `app/server/schema.ts`. Query functions are organised by entity in `app/server/queries/`.

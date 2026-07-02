@@ -1,8 +1,8 @@
-import { signOut } from "@workos-inc/authkit-react-router"
+import { redirect } from "react-router"
 import type { Route } from "./+types/auth.logout"
+import { destroySession } from "../server/session"
 
 export async function action({ request }: Route.ActionArgs) {
-	const url = new URL(request.url)
-	const returnTo = url.origin + "/"
-	return signOut(request, { returnTo })
+	const cookie = await destroySession(request)
+	return redirect("/login", { headers: { "Set-Cookie": cookie } })
 }

@@ -14,6 +14,16 @@ export const updateUserRoleSchema = z.object({
 	role: z.coerce.number().int().min(1).max(7),
 })
 
+/** Validation schema for the "Delete User" form action on `/admin/users`. */
+export const deleteUserSchema = z.object({
+	userId: z.string().min(1),
+})
+
+/** Validation schema for the "Generate Invite" form action on `/admin/users`. */
+export const generateInviteSchema = z.object({
+	userId: z.string().min(1),
+})
+
 /** Inferred TypeScript type for the create user form payload. */
 export type CreateUserInput = z.infer<typeof createUserSchema>
 /** Inferred TypeScript type for the update role form payload. */

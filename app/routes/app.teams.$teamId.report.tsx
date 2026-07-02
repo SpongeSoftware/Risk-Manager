@@ -6,7 +6,7 @@ import type { Route } from "./+types/app.teams.$teamId.report"
 export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Team Report" }]
 import { requireUserLoader } from "../server/auth"
 import { Role, hasRole } from "../server/schema"
-import { getTeamById, getAssessmentsForTeam, getRiskItemsForAssessment } from "../server/queries"
+import { getTeamById, getAssessmentsForTeam, getRiskItemsForAssessments } from "../server/queries"
 import { isUserInTeam } from "../server/queries/teams"
 import { riskLevel, riskLevelLabel, formatDate } from "../lib/formatters"
 import { RiskMatrix } from "../components/domain/RiskMatrix"
@@ -24,12 +24,19 @@ export async function loader(args: Route.LoaderArgs) {
 		}
 
 		const assessments = await getAssessmentsForTeam(teamId)
-		const assessmentsWithItems = await Promise.all(
-			assessments.map(async (a) => ({
-				...a,
-				riskItems: await getRiskItemsForAssessment(a.id),
-			})),
-		)
+		// One batch query instead of one per assessment; the single score-desc
+		// ordering is preserved within each group.
+		const allItems = await getRiskItemsForAssessments(assessments.map((a) => a.id))
+		const itemsByAssessment = new Map<number, typeof allItems>()
+		for (const item of allItems) {
+			const group = itemsByAssessment.get(item.assessmentId) ?? []
+			group.push(item)
+			itemsByAssessment.set(item.assessmentId, group)
+		}
+		const assessmentsWithItems = assessments.map((a) => ({
+			...a,
+			riskItems: itemsByAssessment.get(a.id) ?? [],
+		}))
 
 		return { team, assessments: assessmentsWithItems, generatedAt: new Date().toISOString() }
 	})
@@ -97,34 +104,36 @@ export default function ReportPage({ loaderData }: Route.ComponentProps) {
 					{assessment.riskItems.length === 0 ? (
 						<p className="text-surface-500 text-sm">No risk items.</p>
 					) : (
-						<table className="w-full text-sm border-collapse">
-							<thead>
-								<tr className="bg-surface-50 dark:bg-surface-900">
-									{["Asset", "Category", "Threat", "L", "I", "Score", "Level", "Treatment"].map((h) => (
-										<th key={h} className="px-3 py-2 text-left font-medium text-surface-600 dark:text-surface-400 border border-surface-200 dark:border-surface-700">
-											{h}
-										</th>
-									))}
-								</tr>
-							</thead>
-							<tbody>
-								{assessment.riskItems.map((item) => {
-									const level = riskLevel(item.riskScore)
-									return (
-										<tr key={item.id} className="border border-surface-200 dark:border-surface-700">
-											<td className="px-3 py-2">{item.assetName}</td>
-											<td className="px-3 py-2">{item.assetCategory}</td>
-											<td className="px-3 py-2">{item.threat}</td>
-											<td className="px-3 py-2">{item.likelihood}</td>
-											<td className="px-3 py-2">{item.impact}</td>
-											<td className={`px-3 py-2 font-bold ${levelColors[level]}`}>{item.riskScore}</td>
-											<td className={`px-3 py-2 ${levelColors[level]}`}>{riskLevelLabel(item.riskScore)}</td>
-											<td className="px-3 py-2 capitalize">{item.treatment}</td>
-										</tr>
-									)
-								})}
-							</tbody>
-						</table>
+						<div className="overflow-x-auto print:overflow-visible">
+							<table className="w-full text-sm border-collapse">
+								<thead>
+									<tr className="bg-surface-50 dark:bg-surface-900">
+										{["Asset", "Category", "Threat", "L", "I", "Score", "Level", "Treatment"].map((h) => (
+											<th key={h} className="px-3 py-2 text-left font-medium text-surface-600 dark:text-surface-400 border border-surface-200 dark:border-surface-700">
+												{h}
+											</th>
+										))}
+									</tr>
+								</thead>
+								<tbody>
+									{assessment.riskItems.map((item) => {
+										const level = riskLevel(item.riskScore)
+										return (
+											<tr key={item.id} className="border border-surface-200 dark:border-surface-700">
+												<td className="px-3 py-2">{item.assetName}</td>
+												<td className="px-3 py-2">{item.assetCategory}</td>
+												<td className="px-3 py-2">{item.threat}</td>
+												<td className="px-3 py-2">{item.likelihood}</td>
+												<td className="px-3 py-2">{item.impact}</td>
+												<td className={`px-3 py-2 font-bold ${levelColors[level]}`}>{item.riskScore}</td>
+												<td className={`px-3 py-2 ${levelColors[level]}`}>{riskLevelLabel(item.riskScore)}</td>
+												<td className="px-3 py-2 capitalize">{item.treatment}</td>
+											</tr>
+										)
+									})}
+								</tbody>
+							</table>
+						</div>
 					)}
 					{assessment.riskItems.length > 0 && (
 						<div className="mt-6 print:mt-4">

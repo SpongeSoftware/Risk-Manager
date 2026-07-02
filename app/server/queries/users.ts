@@ -51,17 +51,64 @@ export async function createUser(data: NewUser) {
 }
 
 /**
- * Links a WorkOS user ID to an existing database user on their first sign-in.
- * Called by {@link requireUser} when `workosId` is still null after account lookup.
+ * Sets a user's password hash and consumes any outstanding invite token.
+ * Called when an invite link is redeemed on the set-password page.
  *
  * @param id - The user's internal UUID.
- * @param workosId - The WorkOS user ID to associate.
+ * @param passwordHash - The scrypt hash string from `hashPassword()`.
+ * @param actorId - The ID of the user performing the change (the user themselves).
  */
-export async function updateUserWorkosId(id: string, workosId: string) {
+export async function setUserPassword(id: string, passwordHash: string, actorId: string) {
 	await db
 		.update(users)
-		.set({ workosId, modifiedDate: new Date().toISOString(), modifiedBy: id })
+		.set({
+			passwordHash,
+			inviteTokenHash: null,
+			inviteTokenExpiresAt: null,
+			modifiedBy: actorId,
+			modifiedDate: new Date().toISOString(),
+		})
 		.where(eq(users.id, id))
+}
+
+/**
+ * Stores a new invite token hash for a user, replacing any previous invite.
+ * Regenerating an invite is also the password-reset path.
+ *
+ * @param id - The user's internal UUID.
+ * @param tokenHash - SHA-256 of the raw invite token (raw token is never stored).
+ * @param expiresAt - ISO timestamp after which the invite is invalid.
+ * @param actorId - The ID of the Admin generating the invite.
+ */
+export async function setInviteToken(
+	id: string,
+	tokenHash: string,
+	expiresAt: string,
+	actorId: string,
+) {
+	await db
+		.update(users)
+		.set({
+			inviteTokenHash: tokenHash,
+			inviteTokenExpiresAt: expiresAt,
+			modifiedBy: actorId,
+			modifiedDate: new Date().toISOString(),
+		})
+		.where(eq(users.id, id))
+}
+
+/**
+ * Fetches the user holding an outstanding invite token, excluding soft-deleted
+ * records. Expiry is checked by the caller.
+ *
+ * @param tokenHash - SHA-256 of the raw invite token from the link.
+ * @returns The matching user record, or `undefined` if not found.
+ */
+export async function getUserByInviteTokenHash(tokenHash: string) {
+	return db.query.users.findFirst({
+		where: (u, { eq, and, isNull }) =>
+			and(eq(u.inviteTokenHash, tokenHash), isNull(u.deletedAt)),
+	})
 }
 
 /**

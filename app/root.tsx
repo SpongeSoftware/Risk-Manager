@@ -1,4 +1,3 @@
-import { authkitLoader } from "@workos-inc/authkit-react-router"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { PrimeReactProvider } from "primereact/api"
 import { useColorScheme } from "./hooks/useColorScheme"
@@ -12,9 +11,6 @@ import {
 } from "react-router"
 import type { Route } from "./+types/root"
 
-export async function loader(args: Route.LoaderArgs) {
-	return authkitLoader(args)
-}
 import styles from "./styles/main.scss?url"
 import tailwind from "./styles/tailwind.css?url"
 

@@ -5,6 +5,7 @@ import type { Route } from "./+types/app.admin.users"
 import { InputText } from "primereact/inputtext"
 import { Dropdown } from "primereact/dropdown"
 import { Button } from "primereact/button"
+import { Dialog } from "primereact/dialog"
 import { Tag } from "primereact/tag"
 import { DataTable } from "primereact/datatable"
 import { Column } from "primereact/column"
@@ -24,12 +25,36 @@ import {
 	updateUserRole,
 	softDeleteUser,
 	getAdminUserCount,
+	setInviteToken,
 } from "../server/queries/users"
+import { deleteSessionsForUser } from "../server/queries/sessions"
+import { generateToken, hashToken } from "../server/password"
 
 export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Users" }]
 import { z } from "zod/v4"
-import { createUserSchema, updateUserRoleSchema } from "../lib/schemas/user"
+import {
+	createUserSchema,
+	updateUserRoleSchema,
+	deleteUserSchema,
+	generateInviteSchema,
+} from "../lib/schemas/user"
 import { appendAudit } from "../server/queries/audits"
+
+/** Invite links stay valid for 7 days. */
+const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+
+/**
+ * Creates a fresh invite token for a user and returns the link to hand out.
+ * Only the SHA-256 of the token is stored; the raw link exists solely in the
+ * action response the admin copies from.
+ */
+async function issueInvite(request: Request, userId: string, actorId: string) {
+	const token = generateToken()
+	const expiresAt = new Date(Date.now() + INVITE_TTL_MS).toISOString()
+	await setInviteToken(userId, hashToken(token), expiresAt, actorId)
+	await appendAudit("user", userId, "updated", actorId, { fieldChanged: "invite" })
+	return `${new URL(request.url).origin}/set-password?token=${token}`
+}
 
 export async function loader(args: Route.LoaderArgs) {
 	return requireRoleLoader(args, Role.Admin, async () => {
@@ -59,7 +84,35 @@ export async function action({ request }: Route.ActionArgs) {
 		await appendAudit("user", user.id, "created", actor.id, {
 			newValue: JSON.stringify(user),
 		})
-		return data({ ok: true, toast: { severity: "success" as const, summary: "User created" } })
+		const inviteUrl = await issueInvite(request, user.id, actor.id)
+		return data({
+			ok: true,
+			inviteUrl,
+			inviteName: user.fullName,
+			toast: { severity: "success" as const, summary: "User created" },
+		})
+	}
+
+	if (intent === "generate-invite") {
+		const parsed = generateInviteSchema.safeParse(Object.fromEntries(formData))
+		if (!parsed.success) return data({ errors: z.flattenError(parsed.error).fieldErrors }, { status: 400 })
+
+		const allUsers = await getAllUsers()
+		const target = allUsers.find((u) => u.id === parsed.data.userId)
+		if (!target || target.id === "system") {
+			return data({ errors: { invite: ["User not found"] } }, { status: 400 })
+		}
+
+		// Regenerating an invite doubles as a password reset, so revoke any
+		// existing sessions — the account is unusable until the link is redeemed.
+		await deleteSessionsForUser(target.id)
+		const inviteUrl = await issueInvite(request, target.id, actor.id)
+		return data({
+			ok: true,
+			inviteUrl,
+			inviteName: target.fullName,
+			toast: { severity: "success" as const, summary: "Invite link generated" },
+		})
 	}
 
 	if (intent === "update-role") {
@@ -90,7 +143,9 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	if (intent === "delete-user") {
-		const userId = formData.get("userId") as string
+		const parsedDelete = deleteUserSchema.safeParse(Object.fromEntries(formData))
+		if (!parsedDelete.success) return data({ errors: z.flattenError(parsedDelete.error).fieldErrors }, { status: 400 })
+		const userId = parsedDelete.data.userId
 
 		const allUsers = await getAllUsers()
 		const target = allUsers.find((u) => u.id === userId)
@@ -120,6 +175,94 @@ const roleOptions = [
 ]
 
 type User = Awaited<ReturnType<typeof getAllUsers>>[number]
+
+/** Modal showing a freshly generated invite link with a copy button. */
+function InviteLinkDialog({
+	url,
+	name,
+	onHide,
+}: {
+	url: string
+	name: string
+	onHide: () => void
+}) {
+	const [copied, setCopied] = useState(false)
+
+	return (
+		<Dialog
+			header={`Invite link for ${name}`}
+			visible
+			onHide={onHide}
+			className="w-full max-w-lg mx-4"
+		>
+			<p className="text-sm mb-3" style={{ color: "var(--text-color-secondary)" }}>
+				Share this link with the user so they can set their password. It can be used
+				once and expires in 7 days. It will not be shown again.
+			</p>
+			<div className="flex gap-2">
+				<InputText value={url} readOnly className="w-full text-sm" onFocus={(e) => { e.target.select() }} />
+				<Button
+					type="button"
+					icon={copied ? "pi pi-check" : "pi pi-copy"}
+					label={copied ? "Copied" : "Copy"}
+					onClick={() => {
+						void navigator.clipboard.writeText(url).then(() => { setCopied(true) })
+					}}
+				/>
+			</div>
+		</Dialog>
+	)
+}
+
+/** Per-row invite/reset button. Opens a dialog with the one-time link on success. */
+function InviteCell({ user }: { user: User }) {
+	const fetcher = useFetcher<{ inviteUrl?: string; inviteName?: string }>()
+	const [dismissed, setDismissed] = useState<string | null>(null)
+	useActionToast(fetcher.data as Parameters<typeof useActionToast>[0])
+
+	const inviteUrl = fetcher.data?.inviteUrl
+	const hasPassword = Boolean(user.passwordHash)
+
+	return (
+		<>
+			<fetcher.Form method="post" style={{ display: "inline" }}>
+				<input type="hidden" name="intent" value="generate-invite" />
+				<input type="hidden" name="userId" value={user.id} />
+				<Button
+					type="submit"
+					icon={hasPassword ? "pi pi-key" : "pi pi-envelope"}
+					tooltip={hasPassword ? "Reset password (new invite link)" : "Generate invite link"}
+					tooltipOptions={{ position: "top" }}
+					text
+					size="small"
+					loading={fetcher.state !== "idle"}
+					onClick={(e) => {
+						if (hasPassword && !confirm(`Reset ${user.fullName}'s password? Their current password and sessions will stop working.`)) {
+							e.preventDefault()
+						}
+					}}
+				/>
+			</fetcher.Form>
+			{inviteUrl && inviteUrl !== dismissed && (
+				<InviteLinkDialog
+					url={inviteUrl}
+					name={fetcher.data?.inviteName ?? user.fullName}
+					onHide={() => { setDismissed(inviteUrl) }}
+				/>
+			)}
+		</>
+	)
+}
+
+/** Account status derived from password/invite state. */
+function StatusTag({ user }: { user: User }) {
+	if (user.passwordHash) return <Tag severity="success" value="Active" />
+	if (user.inviteTokenExpiresAt && user.inviteTokenExpiresAt > new Date().toISOString()) {
+		return <Tag severity="info" value="Invited" />
+	}
+	if (user.inviteTokenExpiresAt) return <Tag severity="warning" value="Invite expired" />
+	return <Tag severity="warning" value="Not invited" />
+}
 
 function RoleCell({ user }: { user: User }) {
 	const fetcher = useFetcher()
@@ -212,6 +355,16 @@ export default function AdminUsersPage({ loaderData, actionData }: Route.Compone
 	useFlashToast()
 	const tableUsers = users.filter((u) => u.id !== "system")
 
+	// Invite link returned by the create-user action — shown once in a dialog.
+	const createdInvite =
+		actionData && "inviteUrl" in actionData && typeof actionData.inviteUrl === "string"
+			? {
+				url: actionData.inviteUrl,
+				name: "inviteName" in actionData ? String(actionData.inviteName) : "",
+			}
+			: null
+	const [dismissedInvite, setDismissedInvite] = useState<string | null>(null)
+
 	const [globalFilterValue, setGlobalFilterValue] = useState("")
 	const [filters, setFilters] = useState({
 		global: { value: null as string | null, matchMode: FilterMatchMode.CONTAINS },
@@ -243,6 +396,15 @@ export default function AdminUsersPage({ loaderData, actionData }: Route.Compone
 
 			{errors?.role && <Message severity="error" text={errors.role[0]} className="w-full mb-4" />}
 			{errors?.delete && <Message severity="error" text={errors.delete[0]} className="w-full mb-4" />}
+			{errors?.invite && <Message severity="error" text={errors.invite[0]} className="w-full mb-4" />}
+
+			{createdInvite && createdInvite.url !== dismissedInvite && (
+				<InviteLinkDialog
+					url={createdInvite.url}
+					name={createdInvite.name}
+					onHide={() => { setDismissedInvite(createdInvite.url) }}
+				/>
+			)}
 
 			<DataTable
 				value={tableUsers}
@@ -264,31 +426,30 @@ export default function AdminUsersPage({ loaderData, actionData }: Route.Compone
 				<Column header="Role" body={(u: User) => <RoleCell user={u} />} />
 				<Column
 					header="Status"
-					body={(u: User) =>
-						u.workosId
-							? <Tag severity="success" value="Linked" />
-							: <Tag severity="warning" value="Pending" />
-					}
+					body={(u: User) => <StatusTag user={u} />}
 					sortable
-					field="workosId"
+					field="passwordHash"
 				/>
 				<Column
 					header="Actions"
 					body={(u: User) => (
-						<Form method="post" style={{ display: "inline" }}>
-							<input type="hidden" name="intent" value="delete-user" />
-							<input type="hidden" name="userId" value={u.id} />
-							<Button
-								type="submit"
-								icon="pi pi-trash"
-								severity="danger"
-								text
-								size="small"
-								onClick={(e) => {
-									if (!confirm(`Delete ${u.fullName}?`)) e.preventDefault()
-								}}
-							/>
-						</Form>
+						<div className="flex items-center">
+							<InviteCell user={u} />
+							<Form method="post" style={{ display: "inline" }}>
+								<input type="hidden" name="intent" value="delete-user" />
+								<input type="hidden" name="userId" value={u.id} />
+								<Button
+									type="submit"
+									icon="pi pi-trash"
+									severity="danger"
+									text
+									size="small"
+									onClick={(e) => {
+										if (!confirm(`Delete ${u.fullName}?`)) e.preventDefault()
+									}}
+								/>
+							</Form>
+						</div>
 					)}
 				/>
 			</DataTable>

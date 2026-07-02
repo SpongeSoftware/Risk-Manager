@@ -10,5 +10,14 @@ export const createSemesterSchema = z.object({
 	isActive: z.coerce.boolean().default(true),
 })
 
+/** Validation schema for the toggle-active/delete row actions on `/admin/semesters`. */
+export const semesterActionSchema = z.object({
+	id: z.coerce.number().int().positive(),
+	isActive: z
+		.enum(["true", "false"])
+		.transform((v) => v === "true")
+		.optional(),
+})
+
 /** Inferred TypeScript type for the create semester form payload. */
 export type CreateSemesterInput = z.infer<typeof createSemesterSchema>

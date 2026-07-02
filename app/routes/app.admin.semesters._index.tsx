@@ -17,6 +17,8 @@ import { requireRole, requireRoleLoader } from "../server/auth"
 import { Role } from "../server/schema"
 import { getAllSemesters, updateSemesterActive, softDeleteSemester, getSemesterById } from "../server/queries"
 import { appendAudit } from "../server/queries/audits"
+import { z } from "zod/v4"
+import { semesterActionSchema } from "../lib/schemas/semester"
 
 export const meta: Route.MetaFunction = () => [{ title: "Risk Management — Semesters" }]
 
@@ -31,10 +33,12 @@ export async function action({ request }: Route.ActionArgs) {
 	const actor = await requireRole(request, Role.Admin)
 	const formData = await request.formData()
 	const intent = formData.get("intent") as string
-	const id = Number(formData.get("id"))
+	const parsed = semesterActionSchema.safeParse(Object.fromEntries(formData))
+	if (!parsed.success) return data({ errors: z.flattenError(parsed.error).fieldErrors }, { status: 400 })
+	const { id } = parsed.data
 
 	if (intent === "toggle-active") {
-		const isActive = formData.get("isActive") === "true"
+		const isActive = parsed.data.isActive === true
 		const existing = await getSemesterById(id)
 		await updateSemesterActive(id, isActive, actor.id)
 		await appendAudit("semester", id, "updated", actor.id, {
